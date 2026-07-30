@@ -1,0 +1,39 @@
+name: Reusable residential synthetic
+
+on:
+  workflow_call:
+    inputs:
+      command:
+        type: string
+        required: true
+      artifact-path:
+        type: string
+        default: ""
+      timeout-minutes:
+        type: number
+        default: 10
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic:
+    runs-on: [self-hosted, ci-pool-ops, residential-egress]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Synthetic check
+        env:
+          COMMAND: ${{ inputs.command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Failure evidence
+        if: failure() && inputs.artifact-path != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: synthetic-failure-${{ github.run_id }}
+          path: ${{ inputs.artifact-path }}
+          if-no-files-found: ignore
+          retention-days: 7
+

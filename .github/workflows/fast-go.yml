@@ -1,0 +1,91 @@
+name: Reusable fast Go CI
+
+on:
+  workflow_call:
+    inputs:
+      go-version:
+        type: string
+        default: "1.25.x"
+      working-directory:
+        type: string
+        default: "."
+      generate-command:
+        type: string
+        default: ""
+      vet-command:
+        type: string
+        default: go vet ./...
+      test-command:
+        type: string
+        default: go test ./...
+      govulncheck-version:
+        type: string
+        default: "v1.1.4"
+      timeout-minutes:
+        type: number
+        default: 15
+
+permissions:
+  contents: read
+
+jobs:
+  vulnerability:
+    runs-on: [self-hosted, ci-pool-go]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    env:
+      GOTOOLCHAIN: local
+      GOFLAGS: -mod=readonly
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: ${{ inputs.go-version }}
+          cache: true
+      - name: Install govulncheck
+        env:
+          VERSION: ${{ inputs.govulncheck-version }}
+        run: go install "golang.org/x/vuln/cmd/govulncheck@$VERSION"
+      - run: govulncheck ./...
+
+  test:
+    runs-on: [self-hosted, ci-pool-go]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    env:
+      GOTOOLCHAIN: local
+      GOFLAGS: -mod=readonly
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: ${{ inputs.go-version }}
+          cache: true
+      - run: go mod download
+      - run: go mod verify
+      - name: Generate and prove clean
+        if: inputs.generate-command != ''
+        env:
+          COMMAND: ${{ inputs.generate-command }}
+        run: |
+          bash -euo pipefail -c "$COMMAND"
+          git diff --exit-code
+      - name: Vet
+        env:
+          COMMAND: ${{ inputs.vet-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Tests
+        env:
+          COMMAND: ${{ inputs.test-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+

@@ -1,0 +1,54 @@
+name: Reusable Unraid plugin CI
+
+on:
+  workflow_call:
+    inputs:
+      runner-labels-json:
+        type: string
+        default: '["ubuntu-24.04"]'
+      checkout-ref:
+        type: string
+        default: ""
+      build-command:
+        type: string
+        required: true
+      validate-command:
+        type: string
+        required: true
+      artifact-name:
+        type: string
+        required: true
+      artifact-path:
+        type: string
+        required: true
+      timeout-minutes:
+        type: number
+        default: 15
+
+permissions:
+  contents: read
+
+jobs:
+  plugin:
+    runs-on: ${{ fromJSON(inputs.runner-labels-json) }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          persist-credentials: false
+      - name: Build once
+        env:
+          COMMAND: ${{ inputs.build-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Validate exact bytes
+        env:
+          COMMAND: ${{ inputs.validate-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.artifact-path }}
+          if-no-files-found: error
+          retention-days: 7
+

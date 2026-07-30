@@ -1,0 +1,41 @@
+name: Reusable Rust MSRV contract
+
+on:
+  workflow_call:
+    inputs:
+      msrv:
+        type: string
+        required: true
+      working-directory:
+        type: string
+        default: "."
+      command:
+        type: string
+        default: cargo check --workspace --all-targets --locked
+      timeout-minutes:
+        type: number
+        default: 20
+
+permissions:
+  contents: read
+
+jobs:
+  msrv:
+    runs-on: [self-hosted, ci-pool-rust]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: ${{ inputs.msrv }}
+      - name: Enforce declared minimum toolchain
+        env:
+          COMMAND: ${{ inputs.command }}
+        run: bash -euo pipefail -c "$COMMAND"
+

@@ -1,0 +1,53 @@
+name: Reusable CodeQL analysis
+
+on:
+  workflow_call:
+    inputs:
+      language:
+        type: string
+        required: true
+      runner-labels-json:
+        type: string
+        default: '["self-hosted","ci-pool-ops"]'
+      build-mode:
+        type: string
+        default: none
+      build-command:
+        type: string
+        default: ""
+      queries:
+        type: string
+        default: security-extended
+      timeout-minutes:
+        type: number
+        default: 30
+
+permissions:
+  contents: read
+  packages: read
+  security-events: write
+
+jobs:
+  analyze:
+    runs-on: ${{ fromJSON(inputs.runner-labels-json) }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@3b0bd1d116c0bde30213346b22d4f634d96a2fb0 # v3
+        with:
+          languages: ${{ inputs.language }}
+          build-mode: ${{ inputs.build-mode }}
+          queries: ${{ inputs.queries }}
+      - name: Manual build
+        if: inputs.build-mode == 'manual'
+        env:
+          COMMAND: ${{ inputs.build-command }}
+        run: |
+          test -n "$COMMAND"
+          bash -euo pipefail -c "$COMMAND"
+      - uses: github/codeql-action/analyze@3b0bd1d116c0bde30213346b22d4f634d96a2fb0 # v3
+        with:
+          category: /language:${{ inputs.language }}
+

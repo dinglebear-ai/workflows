@@ -1,0 +1,61 @@
+name: Reusable marketplace CI
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        type: string
+        default: "3.12"
+      validation-command:
+        type: string
+        required: true
+      cli-install-command:
+        type: string
+        required: true
+      smoke-command:
+        type: string
+        required: true
+      timeout-minutes:
+        type: number
+        default: 15
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: [self-hosted, ci-pool-python]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: pip
+      - name: Validate manifests, schemas, generators, and tests
+        env:
+          COMMAND: ${{ inputs.validation-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+
+  install-smoke:
+    runs-on: [self-hosted, ci-pool-typescript]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install exact CLI tool versions
+        env:
+          COMMAND: ${{ inputs.cli-install-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Marketplace installation smoke
+        env:
+          COMMAND: ${{ inputs.smoke-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+

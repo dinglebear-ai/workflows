@@ -1,0 +1,46 @@
+name: Reusable fast Rust security
+
+on:
+  workflow_call:
+    inputs:
+      toolchain:
+        type: string
+        default: "1.97.1"
+      working-directory:
+        type: string
+        default: "."
+      cargo-deny-version:
+        type: string
+        default: "0.18.4"
+      command:
+        type: string
+        default: cargo deny check
+      timeout-minutes:
+        type: number
+        default: 15
+
+permissions:
+  contents: read
+
+jobs:
+  deny:
+    runs-on: [self-hosted, ci-pool-rust]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: ${{ inputs.toolchain }}
+      - uses: taiki-e/install-action@065d6a08a14e61e89fb0a4c10eecdbdef39c7d8e # v2
+        with:
+          tool: cargo-deny@${{ inputs.cargo-deny-version }}
+      - env:
+          COMMAND: ${{ inputs.command }}
+        run: bash -euo pipefail -c "$COMMAND"
+

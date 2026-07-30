@@ -1,0 +1,61 @@
+name: Reusable fail-closed system integration
+
+on:
+  workflow_call:
+    inputs:
+      capability-check-command:
+        type: string
+        required: true
+      setup-command:
+        type: string
+        required: true
+      test-command:
+        type: string
+        required: true
+      cleanup-command:
+        type: string
+        required: true
+      artifact-path:
+        type: string
+        default: ""
+      timeout-minutes:
+        type: number
+        default: 30
+
+permissions:
+  contents: read
+
+jobs:
+  system-integration:
+    runs-on: [self-hosted, ci-pool-system, ci-cap-zfs]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Require capability
+        env:
+          COMMAND: ${{ inputs.capability-check-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Setup isolated fixture
+        env:
+          COMMAND: ${{ inputs.setup-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Integration tests
+        env:
+          COMMAND: ${{ inputs.test-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Failure evidence
+        if: failure() && inputs.artifact-path != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: system-integration-failure-${{ github.run_id }}
+          path: ${{ inputs.artifact-path }}
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Cleanup
+        if: always()
+        env:
+          COMMAND: ${{ inputs.cleanup-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+

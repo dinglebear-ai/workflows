@@ -1,0 +1,59 @@
+name: Reusable hosted Python package release
+
+on:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        type: string
+        required: true
+      python-version:
+        type: string
+        default: "3.12"
+      working-directory:
+        type: string
+        default: "."
+      build-command:
+        type: string
+        default: python -m build
+      verify-command:
+        type: string
+        default: python -m twine check dist/*
+      timeout-minutes:
+        type: number
+        default: 20
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    environment: pypi
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: pip
+      - run: python -m pip install --disable-pip-version-check build==1.2.2.post1 twine==6.1.0
+      - name: Build wheel and sdist
+        env:
+          COMMAND: ${{ inputs.build-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Verify package metadata
+        env:
+          COMMAND: ${{ inputs.verify-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        with:
+          packages-dir: ${{ inputs.working-directory }}/dist/
+

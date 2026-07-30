@@ -1,0 +1,86 @@
+name: Reusable fast Bun CI
+
+on:
+  workflow_call:
+    inputs:
+      bun-version:
+        type: string
+        default: "1.2.19"
+      working-directory:
+        type: string
+        default: "."
+      install-command:
+        type: string
+        default: bun install --frozen-lockfile
+      audit-command:
+        type: string
+        default: bun audit
+      lint-command:
+        type: string
+        default: bun run lint
+      typecheck-command:
+        type: string
+        default: bun run typecheck
+      test-command:
+        type: string
+        default: bun test
+      build-command:
+        type: string
+        default: ""
+      timeout-minutes:
+        type: number
+        default: 15
+
+permissions:
+  contents: read
+
+jobs:
+  bun:
+    runs-on: [self-hosted, ci-pool-typescript]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: ${{ inputs.bun-version }}
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: bun-${{ runner.os }}-
+      - name: Locked install
+        env:
+          COMMAND: ${{ inputs.install-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Dependency audit
+        if: inputs.audit-command != ''
+        env:
+          COMMAND: ${{ inputs.audit-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Lint
+        if: inputs.lint-command != ''
+        env:
+          COMMAND: ${{ inputs.lint-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Typecheck
+        if: inputs.typecheck-command != ''
+        env:
+          COMMAND: ${{ inputs.typecheck-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Tests
+        if: inputs.test-command != ''
+        env:
+          COMMAND: ${{ inputs.test-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Fast build
+        if: inputs.build-command != ''
+        env:
+          COMMAND: ${{ inputs.build-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+

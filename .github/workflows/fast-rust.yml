@@ -1,0 +1,85 @@
+name: Reusable fast Rust CI
+
+on:
+  workflow_call:
+    inputs:
+      toolchain:
+        type: string
+        default: "1.97.1"
+      working-directory:
+        type: string
+        default: "."
+      fmt-command:
+        type: string
+        default: cargo fmt --all -- --check
+      check-command:
+        type: string
+        default: cargo check --workspace --all-targets --all-features --locked
+      clippy-command:
+        type: string
+        default: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      test-command:
+        type: string
+        default: cargo test --workspace --locked
+      timeout-minutes:
+        type: number
+        default: 20
+      kache-manifest-key:
+        type: string
+        default: fast-rust
+    secrets:
+      KACHE_S3_ACCESS_KEY:
+        required: true
+      KACHE_S3_SECRET_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    runs-on: [self-hosted, ci-pool-rust]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: ${{ inputs.toolchain }}
+          components: rustfmt, clippy
+      - uses: kunobi-ninja/kache-action@49398d37113c616fdb61be434cb497e3c2c8f3e6 # v1
+        with:
+          version: "0.12.0"
+          s3-bucket: kache
+          s3-region: us-east-1
+          s3-prefix: rust
+          s3-endpoint: https://s3.tootie.tv
+          s3-access-key-id: ${{ secrets.KACHE_S3_ACCESS_KEY }}
+          s3-secret-access-key: ${{ secrets.KACHE_S3_SECRET_KEY }}
+          manifest-key: ${{ inputs.kache-manifest-key }}
+          namespace: ${{ inputs.kache-manifest-key }}
+          warm: "true"
+          sync: "false"
+          pr-comment: "false"
+      - name: Format
+        env:
+          COMMAND: ${{ inputs.fmt-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Check
+        env:
+          COMMAND: ${{ inputs.check-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Clippy
+        env:
+          COMMAND: ${{ inputs.clippy-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Targeted tests
+        env:
+          COMMAND: ${{ inputs.test-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+

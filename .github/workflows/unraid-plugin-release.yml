@@ -1,0 +1,47 @@
+name: Reusable Unraid plugin release
+
+on:
+  workflow_call:
+    inputs:
+      release-tag:
+        type: string
+        required: true
+      artifact-name:
+        type: string
+        required: true
+      artifact-path:
+        type: string
+        required: true
+      validate-command:
+        type: string
+        required: true
+      timeout-minutes:
+        type: number
+        default: 15
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: release-artifacts
+      - name: Revalidate downloaded bytes
+        env:
+          COMMAND: ${{ inputs.validate-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Publish exact artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release-tag }}
+          ARTIFACT_PATH: ${{ inputs.artifact-path }}
+        run: |
+          set -euo pipefail
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+          gh release upload "$TAG" "$ARTIFACT_PATH" --repo "$GITHUB_REPOSITORY" --clobber
+

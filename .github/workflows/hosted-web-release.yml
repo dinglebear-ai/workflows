@@ -1,0 +1,121 @@
+name: Reusable hosted web release
+
+on:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        type: string
+        required: true
+      node-version:
+        type: string
+        default: "22"
+      working-directory:
+        type: string
+        default: "."
+      package-cache:
+        type: string
+        default: npm
+      pnpm-version:
+        type: string
+        default: "10"
+      cache-dependency-path:
+        type: string
+        default: package-lock.json
+      install-command:
+        type: string
+        default: npm ci --no-audit --no-fund
+      coverage-command:
+        type: string
+        required: true
+      build-command:
+        type: string
+        required: true
+      performance-command:
+        type: string
+        default: ""
+      browser-install-command:
+        type: string
+        default: npx playwright install --with-deps chromium firefox webkit
+      e2e-command:
+        type: string
+        default: ""
+      artifact-name:
+        type: string
+        required: true
+      artifact-path:
+        type: string
+        required: true
+      diagnostic-path:
+        type: string
+        default: ""
+      timeout-minutes:
+        type: number
+        default: 60
+
+permissions:
+  contents: read
+
+jobs:
+  web-release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        if: inputs.package-cache == 'pnpm'
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: ${{ inputs.package-cache }}
+          cache-dependency-path: ${{ inputs.cache-dependency-path }}
+      - name: Locked install
+        env:
+          COMMAND: ${{ inputs.install-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Coverage
+        env:
+          COMMAND: ${{ inputs.coverage-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Production build
+        env:
+          COMMAND: ${{ inputs.build-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Performance budgets
+        if: inputs.performance-command != ''
+        env:
+          COMMAND: ${{ inputs.performance-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Install release browsers
+        if: inputs.e2e-command != ''
+        env:
+          COMMAND: ${{ inputs.browser-install-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Browser E2E
+        if: inputs.e2e-command != ''
+        env:
+          COMMAND: ${{ inputs.e2e-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.artifact-path }}
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload failure diagnostics
+        if: failure() && inputs.diagnostic-path != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ inputs.artifact-name }}-diagnostics
+          path: ${{ inputs.diagnostic-path }}
+          if-no-files-found: ignore
+          retention-days: 7

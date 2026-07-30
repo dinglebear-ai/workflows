@@ -1,0 +1,88 @@
+name: Reusable crates.io publication
+
+on:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        type: string
+        required: true
+      toolchain:
+        type: string
+        default: "1.97.1"
+      package:
+        type: string
+        required: true
+      expected-version:
+        type: string
+        required: true
+      working-directory:
+        type: string
+        default: "."
+      timeout-minutes:
+        type: number
+        default: 30
+    secrets:
+      CRATES_IO_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    environment: crates-io
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: ${{ inputs.toolchain }}
+      - name: Require exact package version
+        env:
+          PACKAGE: ${{ inputs.package }}
+          EXPECTED_VERSION: ${{ inputs.expected-version }}
+        run: |
+          set -euo pipefail
+          actual="$(
+            cargo metadata --no-deps --format-version 1 |
+              jq -r --arg package "$PACKAGE" '.packages[] | select(.name == $package) | .version'
+          )"
+          test -n "$actual"
+          test "$actual" = "$EXPECTED_VERSION"
+      - name: Check whether version already exists
+        id: exists
+        env:
+          PACKAGE: ${{ inputs.package }}
+          EXPECTED_VERSION: ${{ inputs.expected-version }}
+        run: |
+          set -euo pipefail
+          code="$(
+            curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+              --header 'User-Agent: dinglebear-ai-workflows' \
+              "https://crates.io/api/v1/crates/${PACKAGE}/${EXPECTED_VERSION}"
+          )"
+          case "$code" in
+            200) echo "published=true" >> "$GITHUB_OUTPUT" ;;
+            404) echo "published=false" >> "$GITHUB_OUTPUT" ;;
+            *) echo "::error::crates.io returned HTTP $code"; exit 1 ;;
+          esac
+      - name: Package dry run
+        if: steps.exists.outputs.published != 'true'
+        env:
+          PACKAGE: ${{ inputs.package }}
+        run: cargo publish --dry-run --locked --package "$PACKAGE"
+      - name: Publish permanently
+        if: steps.exists.outputs.published != 'true'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+          PACKAGE: ${{ inputs.package }}
+        run: cargo publish --locked --package "$PACKAGE"
+

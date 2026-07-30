@@ -1,0 +1,84 @@
+name: Reusable npm trusted publication
+
+on:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        type: string
+        required: true
+      expected-version:
+        type: string
+        required: true
+      node-version:
+        type: string
+        default: "22"
+      working-directory:
+        type: string
+        default: "."
+      cache-dependency-path:
+        type: string
+        default: package-lock.json
+      install-command:
+        type: string
+        default: npm ci --no-audit --no-fund
+      verify-command:
+        type: string
+        default: npm test
+      access:
+        type: string
+        default: public
+      timeout-minutes:
+        type: number
+        default: 20
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    environment: npm
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          registry-url: https://registry.npmjs.org
+          cache: npm
+          cache-dependency-path: ${{ inputs.cache-dependency-path }}
+      - name: Require exact package version
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected-version }}
+        run: |
+          set -euo pipefail
+          actual="$(node -p 'require("./package.json").version')"
+          test "$actual" = "$EXPECTED_VERSION"
+      - name: Locked install
+        env:
+          COMMAND: ${{ inputs.install-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Verify source package
+        env:
+          COMMAND: ${{ inputs.verify-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Pack exact tarball
+        id: pack
+        run: |
+          set -euo pipefail
+          tarball="$(npm pack --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s)[0].filename))')"
+          echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
+      - name: Publish verified tarball with OIDC
+        env:
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+          ACCESS: ${{ inputs.access }}
+        run: npm publish "$TARBALL" --provenance --access "$ACCESS"
+

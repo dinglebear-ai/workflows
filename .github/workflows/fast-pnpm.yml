@@ -1,0 +1,101 @@
+name: Reusable fast pnpm CI
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        type: string
+        default: "22"
+      pnpm-version:
+        type: string
+        default: "10"
+      working-directory:
+        type: string
+        default: "."
+      lockfile-path:
+        type: string
+        default: pnpm-lock.yaml
+      install-command:
+        type: string
+        default: pnpm install --frozen-lockfile
+      audit-command:
+        type: string
+        default: pnpm audit --audit-level high
+      lint-command:
+        type: string
+        default: pnpm lint
+      typecheck-command:
+        type: string
+        default: pnpm typecheck
+      test-command:
+        type: string
+        default: pnpm test
+      contract-command:
+        type: string
+        default: ""
+      build-command:
+        type: string
+        default: ""
+      timeout-minutes:
+        type: number
+        default: 15
+
+permissions:
+  contents: read
+
+jobs:
+  pnpm:
+    runs-on: [self-hosted, ci-pool-typescript]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: pnpm
+          cache-dependency-path: ${{ inputs.lockfile-path }}
+      - name: Locked install
+        env:
+          COMMAND: ${{ inputs.install-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Dependency audit
+        if: inputs.audit-command != ''
+        env:
+          COMMAND: ${{ inputs.audit-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Lint
+        if: inputs.lint-command != ''
+        env:
+          COMMAND: ${{ inputs.lint-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Typecheck
+        if: inputs.typecheck-command != ''
+        env:
+          COMMAND: ${{ inputs.typecheck-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Unit tests
+        if: inputs.test-command != ''
+        env:
+          COMMAND: ${{ inputs.test-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Generated and contract checks
+        if: inputs.contract-command != ''
+        env:
+          COMMAND: ${{ inputs.contract-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Fast build
+        if: inputs.build-command != ''
+        env:
+          COMMAND: ${{ inputs.build-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+

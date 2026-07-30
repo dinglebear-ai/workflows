@@ -1,0 +1,88 @@
+name: Reusable hosted Android release
+
+on:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        type: string
+        required: true
+      java-version:
+        type: string
+        default: "21"
+      working-directory:
+        type: string
+        default: android
+      setup-command:
+        type: string
+        default: ""
+      release-command:
+        type: string
+        default: ./gradlew --no-daemon lintRelease testReleaseUnitTest assembleRelease
+      device-command:
+        type: string
+        default: ""
+      artifact-name:
+        type: string
+        default: android-release
+      artifact-path:
+        type: string
+        default: android/**/build/outputs/**
+      report-path:
+        type: string
+        default: android/**/build/reports/**
+      timeout-minutes:
+        type: number
+        default: 60
+
+permissions:
+  contents: read
+
+jobs:
+  android-release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          persist-credentials: false
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          cache-read-only: false
+      - name: Repository setup
+        if: inputs.setup-command != ''
+        env:
+          COMMAND: ${{ inputs.setup-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Release lint, tests, and assembly
+        env:
+          COMMAND: ${{ inputs.release-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Managed-device tests
+        if: inputs.device-command != ''
+        env:
+          COMMAND: ${{ inputs.device-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.artifact-path }}
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload Android reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ inputs.artifact-name }}-reports
+          path: ${{ inputs.report-path }}
+          if-no-files-found: ignore
+          retention-days: 7
+

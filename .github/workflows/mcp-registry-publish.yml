@@ -1,0 +1,108 @@
+name: Reusable official MCP Registry publication
+
+on:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        type: string
+        required: true
+      expected-version:
+        type: string
+        required: true
+      manifest-path:
+        type: string
+        default: server.json
+      auth-method:
+        type: string
+        default: github-oidc
+      registry-domain:
+        type: string
+        default: ""
+      package-visible-command:
+        type: string
+        required: true
+      verify-command:
+        type: string
+        required: true
+      publisher-version:
+        type: string
+        default: "1.7.9"
+      publisher-sha256:
+        type: string
+        default: ab128162b0616090b47cf245afe0a23f3ef08936fdce19074f5ba0a4469281ac
+      timeout-minutes:
+        type: number
+        default: 20
+    secrets:
+      MCP_PRIVATE_KEY:
+        required: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    environment: mcp-registry-publish
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          persist-credentials: false
+      - name: Require exact manifest version
+        env:
+          MANIFEST_PATH: ${{ inputs.manifest-path }}
+          EXPECTED_VERSION: ${{ inputs.expected-version }}
+        run: |
+          set -euo pipefail
+          test -f "$MANIFEST_PATH"
+          test "$(jq -r '.version' "$MANIFEST_PATH")" = "$EXPECTED_VERSION"
+          jq -e '.name | type == "string" and length > 0' "$MANIFEST_PATH" >/dev/null
+      - name: Require package visibility
+        env:
+          COMMAND: ${{ inputs.package-visible-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Install verified mcp-publisher
+        env:
+          VERSION: ${{ inputs.publisher-version }}
+          EXPECTED_SHA256: ${{ inputs.publisher-sha256 }}
+        run: |
+          set -euo pipefail
+          archive=mcp-publisher_linux_amd64.tar.gz
+          curl --fail --location --retry 3 --output "$archive" \
+            "https://github.com/modelcontextprotocol/registry/releases/download/v${VERSION}/${archive}"
+          printf '%s  %s\n' "$EXPECTED_SHA256" "$archive" | sha256sum --check --strict
+          tar --extract --gzip --file "$archive" mcp-publisher
+          chmod +x mcp-publisher
+          ./mcp-publisher --version
+      - name: Authenticate with GitHub OIDC
+        if: inputs.auth-method == 'github-oidc'
+        run: ./mcp-publisher login github-oidc
+      - name: Authenticate with DNS ownership
+        if: inputs.auth-method == 'dns'
+        env:
+          DOMAIN: ${{ inputs.registry-domain }}
+          MCP_PRIVATE_KEY: ${{ secrets.MCP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$DOMAIN"
+          test -n "$MCP_PRIVATE_KEY"
+          ./mcp-publisher login dns --domain "$DOMAIN" --private-key "$MCP_PRIVATE_KEY"
+      - name: Reject unsupported authentication method
+        if: inputs.auth-method != 'github-oidc' && inputs.auth-method != 'dns'
+        env:
+          AUTH_METHOD: ${{ inputs.auth-method }}
+        run: |
+          echo "::error::unsupported MCP Registry auth method: $AUTH_METHOD"
+          exit 1
+      - name: Publish validated manifest
+        env:
+          MANIFEST_PATH: ${{ inputs.manifest-path }}
+        run: ./mcp-publisher publish "$MANIFEST_PATH"
+      - name: Verify published registry state
+        env:
+          COMMAND: ${{ inputs.verify-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+

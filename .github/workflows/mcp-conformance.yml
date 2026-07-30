@@ -1,0 +1,73 @@
+name: Reusable hosted MCP conformance
+
+on:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        type: string
+        required: true
+      conformance-version:
+        type: string
+        default: "0.2.0-alpha.9"
+      node-version:
+        type: string
+        default: "22"
+      setup-command:
+        type: string
+        default: ""
+      conformance-command:
+        type: string
+        required: true
+      results-path:
+        type: string
+        default: target/mcp-conformance
+      artifact-name:
+        type: string
+        default: mcp-conformance
+      timeout-minutes:
+        type: number
+        default: 60
+
+permissions:
+  contents: read
+
+jobs:
+  conformance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ inputs.node-version }}
+      - name: Install pinned official conformance suite
+        env:
+          VERSION: ${{ inputs.conformance-version }}
+        run: |
+          set -euo pipefail
+          root="${RUNNER_TEMP}/mcp-conformance"
+          npm install --prefix "$root" --ignore-scripts --no-package-lock \
+            "@modelcontextprotocol/conformance@${VERSION}"
+          echo "MCP_CONFORMANCE_BIN=${root}/node_modules/.bin/conformance" >> "$GITHUB_ENV"
+      - name: Repository setup
+        if: inputs.setup-command != ''
+        env:
+          COMMAND: ${{ inputs.setup-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Run full MCP conformance
+        env:
+          COMMAND: ${{ inputs.conformance-command }}
+          MCP_CONFORMANCE_OUTPUT_DIR: ${{ inputs.results-path }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Upload conformance evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.results-path }}
+          if-no-files-found: error
+          retention-days: 14
+

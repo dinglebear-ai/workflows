@@ -1,0 +1,57 @@
+name: Reusable GitHub release publication
+
+on:
+  workflow_call:
+    inputs:
+      release-tag:
+        type: string
+        required: true
+      artifact-pattern:
+        type: string
+        default: "*"
+      artifact-path:
+        type: string
+        default: release-artifacts
+      timeout-minutes:
+        type: number
+        default: 20
+
+permissions:
+  contents: write
+  attestations: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: ${{ inputs.artifact-pattern }}
+          path: ${{ inputs.artifact-path }}
+          merge-multiple: true
+      - name: Require release artifacts
+        env:
+          ARTIFACT_PATH: ${{ inputs.artifact-path }}
+        run: |
+          set -euo pipefail
+          find "$ARTIFACT_PATH" -type f -print -quit | grep -q .
+          find "$ARTIFACT_PATH" -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: |
+            ${{ inputs.artifact-path }}/**
+            SHA256SUMS
+      - name: Upload exact verified bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release-tag }}
+          ARTIFACT_PATH: ${{ inputs.artifact-path }}
+        run: |
+          set -euo pipefail
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+          mapfile -d '' files < <(find "$ARTIFACT_PATH" -type f -print0)
+          gh release upload "$TAG" "${files[@]}" SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --clobber
+

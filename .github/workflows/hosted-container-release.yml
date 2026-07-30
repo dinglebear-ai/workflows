@@ -1,0 +1,98 @@
+name: Reusable hosted amd64 container release
+
+on:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        type: string
+        required: true
+      registry:
+        type: string
+        default: ghcr.io
+      image:
+        type: string
+        required: true
+      release-tag:
+        type: string
+        required: true
+      context:
+        type: string
+        default: "."
+      dockerfile:
+        type: string
+        default: Dockerfile
+      build-args:
+        type: string
+        default: ""
+      smoke-command:
+        type: string
+        required: true
+      cache-scope:
+        type: string
+        default: container-release
+      timeout-minutes:
+        type: number
+        default: 60
+    secrets:
+      REGISTRY_USERNAME:
+        required: true
+      REGISTRY_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+  attestations: write
+  id-token: write
+
+jobs:
+  container-release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+      image: ${{ inputs.image }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
+      - name: Build and push immutable candidate
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
+          platforms: linux/amd64
+          build-args: ${{ inputs.build-args }}
+          tags: ${{ inputs.image }}:sha-${{ github.sha }}
+          cache-from: type=gha,scope=${{ inputs.cache-scope }}
+          cache-to: type=gha,mode=max,scope=${{ inputs.cache-scope }}
+          provenance: true
+          sbom: true
+          push: true
+      - name: Smoke exact digest
+        env:
+          COMMAND: ${{ inputs.smoke-command }}
+          IMAGE_REF: ${{ inputs.image }}@${{ steps.build.outputs.digest }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Scan exact digest
+        uses: aquasecurity/trivy-action@c07df6fec6fa692e6fd1200d50aaa1fdd66f03c8
+        with:
+          image-ref: ${{ inputs.image }}@${{ steps.build.outputs.digest }}
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Promote verified digest
+        env:
+          SOURCE: ${{ inputs.image }}@${{ steps.build.outputs.digest }}
+          DESTINATION: ${{ inputs.image }}:${{ inputs.release-tag }}
+        run: docker buildx imagetools create --tag "$DESTINATION" "$SOURCE"
+

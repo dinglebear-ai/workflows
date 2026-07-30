@@ -1,0 +1,81 @@
+name: Reusable hosted Rust x86_64 platform release
+
+on:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        type: string
+        required: true
+      toolchain:
+        type: string
+        default: "1.97.1"
+      working-directory:
+        type: string
+        default: "."
+      targets-json:
+        type: string
+        default: >-
+          [{"runner":"ubuntu-24.04","target":"x86_64-unknown-linux-gnu"},
+           {"runner":"macos-15-intel","target":"x86_64-apple-darwin"},
+           {"runner":"windows-2025","target":"x86_64-pc-windows-msvc"}]
+      build-command:
+        type: string
+        default: cargo build --release --locked --target "$TARGET"
+      package-command:
+        type: string
+        required: true
+      artifact-path:
+        type: string
+        required: true
+      artifact-prefix:
+        type: string
+        required: true
+      timeout-minutes:
+        type: number
+        default: 60
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.targets-json) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Require x86_64 target
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          [[ "$TARGET" == x86_64-* ]]
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: ${{ inputs.toolchain }}
+          targets: ${{ matrix.target }}
+      - name: Build release
+        env:
+          COMMAND: ${{ inputs.build-command }}
+          TARGET: ${{ matrix.target }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Package exact output
+        env:
+          COMMAND: ${{ inputs.package-command }}
+          TARGET: ${{ matrix.target }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ inputs.artifact-prefix }}-${{ matrix.target }}
+          path: ${{ inputs.artifact-path }}
+          if-no-files-found: error
+          retention-days: 7

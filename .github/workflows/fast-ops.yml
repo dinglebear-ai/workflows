@@ -1,0 +1,56 @@
+name: Reusable fast operations CI
+
+on:
+  workflow_call:
+    inputs:
+      shell-globs:
+        type: string
+        default: "**/*.sh"
+      actionlint-version:
+        type: string
+        default: "v1.7.7"
+      policy-command:
+        type: string
+        default: ""
+      timeout-minutes:
+        type: number
+        default: 10
+
+permissions:
+  contents: read
+
+jobs:
+  ops:
+    runs-on: [self-hosted, ci-pool-ops]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.25.x"
+          cache: false
+      - name: Install pinned actionlint
+        env:
+          VERSION: ${{ inputs.actionlint-version }}
+        run: go install "github.com/rhysd/actionlint/cmd/actionlint@$VERSION"
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends shellcheck
+      - run: actionlint
+      - name: ShellCheck and parse shell
+        env:
+          SHELL_GLOBS: ${{ inputs.shell-globs }}
+        run: |
+          set -euo pipefail
+          mapfile -d '' files < <(git ls-files -z -- $SHELL_GLOBS)
+          ((${#files[@]} == 0)) && exit 0
+          shellcheck "${files[@]}"
+          for file in "${files[@]}"; do bash -n "$file"; done
+      - name: Repository policy
+        if: inputs.policy-command != ''
+        env:
+          COMMAND: ${{ inputs.policy-command }}
+        run: bash -euo pipefail -c "$COMMAND"

@@ -1,0 +1,87 @@
+name: Reusable hosted Go release
+
+on:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        type: string
+        required: true
+      go-version:
+        type: string
+        default: "1.25.x"
+      working-directory:
+        type: string
+        default: "."
+      main-package:
+        type: string
+        default: ./cmd/app
+      binary-name:
+        type: string
+        required: true
+      targets-json:
+        type: string
+        default: >-
+          [{"goos":"linux","goarch":"amd64","suffix":""},
+           {"goos":"darwin","goarch":"amd64","suffix":""},
+           {"goos":"windows","goarch":"amd64","suffix":".exe"}]
+      ldflags:
+        type: string
+        default: "-s -w"
+      timeout-minutes:
+        type: number
+        default: 30
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(inputs.targets-json) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Reject non-x86_64 target
+        env:
+          GOARCH: ${{ matrix.target.goarch }}
+        run: test "$GOARCH" = amd64
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: ${{ inputs.go-version }}
+          cache: true
+      - run: go mod download
+      - run: go mod verify
+      - name: Build
+        env:
+          GOOS: ${{ matrix.target.goos }}
+          GOARCH: ${{ matrix.target.goarch }}
+          CGO_ENABLED: "0"
+          MAIN_PACKAGE: ${{ inputs.main-package }}
+          BINARY_NAME: ${{ inputs.binary-name }}
+          SUFFIX: ${{ matrix.target.suffix }}
+          LDFLAGS: ${{ inputs.ldflags }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          go build -trimpath -ldflags "$LDFLAGS" \
+            -o "dist/${BINARY_NAME}-${GOOS}-${GOARCH}${SUFFIX}" "$MAIN_PACKAGE"
+          (cd dist && sha256sum -- "${BINARY_NAME}-${GOOS}-${GOARCH}${SUFFIX}" > SHA256SUMS)
+          tar -C dist -czf "dist/${BINARY_NAME}-${GOOS}-${GOARCH}.tar.gz" \
+            "${BINARY_NAME}-${GOOS}-${GOARCH}${SUFFIX}" SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ inputs.binary-name }}-${{ matrix.target.goos }}-amd64
+          path: ${{ inputs.working-directory }}/dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+

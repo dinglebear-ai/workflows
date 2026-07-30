@@ -1,0 +1,53 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  python:
+    permissions:
+      contents: read
+      packages: read
+    uses: dinglebear-ai/workflows/.github/workflows/fast-python.yml@__WORKFLOWS_SHA__
+    secrets: inherit
+  security:
+    permissions:
+      contents: read
+      security-events: write
+    uses: dinglebear-ai/workflows/.github/workflows/python-security.yml@__WORKFLOWS_SHA__
+    secrets: inherit
+  codeql:
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+    uses: dinglebear-ai/workflows/.github/workflows/codeql.yml@__WORKFLOWS_SHA__
+    with:
+      language: python
+      runner-labels: '["self-hosted","ci-pool-python"]'
+    secrets: inherit
+  ci:
+    name: CI
+    if: always()
+    needs: [python, security, codeql]
+    runs-on: [self-hosted, ci-pool-ops]
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Require all checks
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          results = json.loads(os.environ["RESULTS"])
+          failed = {name: job["result"] for name, job in results.items() if job["result"] != "success"}
+          if failed:
+              print(f"required checks did not succeed: {failed}", file=sys.stderr)
+              raise SystemExit(1)
+          PY
