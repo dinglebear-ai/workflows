@@ -125,11 +125,14 @@ class WorkflowLibraryTests(unittest.TestCase):
                     stdout=subprocess.DEVNULL,
                 )
                 ci = (target / ".github/workflows/ci.yml").read_text()
+                policy = (target / ".github/workflows/policy.yml").read_text()
                 self.assertNotIn("__WORKFLOWS_SHA__", ci)
                 self.assertIn(
                     "@0123456789abcdef0123456789abcdef01234567",
                     ci,
                 )
+                self.assertNotIn("__PROFILE__", policy)
+                self.assertIn(f"profile: {profile if profile != 'pnpm' and profile != 'bun' else 'node'}", policy)
                 self.assertIn("runner-labels-json:", ci)
                 release_config = (
                     target / "release-please-config.json"

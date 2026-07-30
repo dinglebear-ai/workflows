@@ -1,3 +1,9 @@
+---
+title: CI container images
+created: 2026-07-30
+updated: 2026-07-30
+---
+
 # CI container images
 
 The runner farm provides scheduling and execution. These images provide a

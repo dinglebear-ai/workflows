@@ -1,3 +1,9 @@
+---
+title: Incus image workflow contract
+created: 2026-07-30
+updated: 2026-07-30
+---
+
 # Incus image workflow contract
 
 Incus image assembly is a heavyweight release operation. It runs only from an

@@ -1,3 +1,9 @@
+---
+title: New repository setup
+created: 2026-07-30
+updated: 2026-07-30
+---
+
 # New repository setup
 
 ## 1. Install a caller
@@ -37,4 +43,3 @@ retry names an existing Release Please release.
 - main and release runs never cancel;
 - no ARM or QEMU term appears in executable release/install metadata;
 - publication environments cannot be reached from unreviewed code.
-

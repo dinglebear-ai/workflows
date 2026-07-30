@@ -1,3 +1,9 @@
+---
+title: Workflow catalog
+created: 2026-07-30
+updated: 2026-07-30
+---
+
 # Workflow catalog
 
 The catalog contains 44 reusable workflows plus three repository-internal

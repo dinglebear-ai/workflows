@@ -1,3 +1,9 @@
+---
+title: Security model
+created: 2026-07-30
+updated: 2026-07-30
+---
+
 # Security model
 
 ## Trust boundaries

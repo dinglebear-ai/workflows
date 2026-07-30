@@ -70,6 +70,10 @@ case "$profile" in
   python) release_type="python" ;;
   node|pnpm|bun) release_type="node" ;;
 esac
+contract_profile="$profile"
+case "$contract_profile" in
+  pnpm|bun) contract_profile="node" ;;
+esac
 written=0
 skipped=0
 
@@ -93,6 +97,7 @@ render_file() {
     -e "s/__REPOSITORY_NAME__/$repo_name/g" \
     -e "s/__YEAR__/$year/g" \
     -e "s/__RELEASE_TYPE__/$release_type/g" \
+    -e "s/__PROFILE__/$contract_profile/g" \
     "$source" >"$temporary"
   chmod --reference="$source" "$temporary"
   mv "$temporary" "$destination"

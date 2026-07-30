@@ -1,3 +1,9 @@
+---
+title: Architecture
+created: 2026-07-30
+updated: 2026-07-30
+---
+
 # Architecture
 
 ## Two layers
@@ -51,4 +57,3 @@ fast protected gate
 
 Package publication must complete before MCP Registry publication because the
 official registry validates referenced packages.
-

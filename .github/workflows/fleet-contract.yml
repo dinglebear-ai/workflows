@@ -1,0 +1,40 @@
+name: Reusable fleet repository contract
+
+on:
+  workflow_call:
+    inputs:
+      profile:
+        description: Repository contract profile.
+        type: string
+        required: true
+      timeout-minutes:
+        type: number
+        default: 5
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: [self-hosted, ci-pool-ops]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - name: Check out caller
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          path: target
+          persist-credentials: false
+      - name: Check out immutable contract implementation
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          repository: dinglebear-ai/workflows
+          ref: ${{ github.workflow_sha }}
+          path: workflow-library
+          persist-credentials: false
+      - name: Validate repository contract
+        env:
+          PROFILE: ${{ inputs.profile }}
+        run: >-
+          python3 workflow-library/scripts/fleet_contract.py check
+          --repo target
+          --profile "$PROFILE"
