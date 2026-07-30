@@ -313,18 +313,27 @@ def check_scoped_text(repo: pathlib.Path) -> list[Finding]:
     findings: list[Finding] = []
     for path in tracked_files(repo):
         rel = relative(repo, path)
-        if not path.is_file() or path.is_symlink():
+        stale_scope = (
+            path.name in {"Cargo.toml", "package.json", "server.json", "plugin.json"}
+            or "compose" in path.name
+            or path.suffix in {".plg"}
+        )
+        arm_scope = (
+            path.name in {"install.sh", "server.json", "package.json"}
+            or path.suffix in {".plg"}
+            or rel.startswith("scripts/install")
+        )
+        if (
+            not (stale_scope or arm_scope)
+            or not path.is_file()
+            or path.is_symlink()
+        ):
             continue
         try:
             text = path.read_text()
         except (OSError, UnicodeDecodeError):
             continue
 
-        stale_scope = (
-            path.name in {"Cargo.toml", "package.json", "server.json", "plugin.json"}
-            or "compose" in path.name
-            or path.suffix in {".plg"}
-        )
         if stale_scope and STALE_OWNER.search(text):
             findings.append(
                 Finding(
@@ -334,11 +343,6 @@ def check_scoped_text(repo: pathlib.Path) -> list[Finding]:
                 )
             )
 
-        arm_scope = (
-            path.name in {"install.sh", "server.json", "package.json"}
-            or path.suffix in {".plg"}
-            or rel.startswith("scripts/install")
-        )
         if arm_scope and ARM_CONTRACT.search(text):
             findings.append(
                 Finding(
@@ -407,12 +411,31 @@ def check_descriptions(repo: pathlib.Path) -> list[Finding]:
 
 def check_tracked_paths(repo: pathlib.Path) -> list[Finding]:
     findings: list[Finding] = []
-    for path in tracked_files(repo):
-        rel = relative(repo, path)
-        ignored = subprocess.run(
-            ["git", "-C", str(repo), "check-ignore", "--no-index", "-q", "--", rel],
-            check=False,
-        ).returncode == 0
+    tracked = tracked_files(repo)
+    relative_paths = [relative(repo, path) for path in tracked]
+    ignored_result = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repo),
+            "check-ignore",
+            "--no-index",
+            "-z",
+            "--stdin",
+        ],
+        input="\0".join(relative_paths) + "\0",
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    ignored_paths = {
+        path
+        for path in ignored_result.stdout.rstrip("\0").split("\0")
+        if path
+    }
+
+    for path, rel in zip(tracked, relative_paths, strict=True):
+        ignored = rel in ignored_paths
         parts = pathlib.PurePosixPath(rel).parts
         litter = rel in AGENT_LITTER or any(part in AGENT_LITTER for part in parts)
         if ignored or litter:
@@ -433,23 +456,53 @@ def check_env_schema(repo: pathlib.Path) -> list[Finding]:
     if not keys:
         return []
 
-    consumers: list[str] = []
+    unused = set(keys)
+    source_suffixes = {
+        ".c",
+        ".cc",
+        ".go",
+        ".h",
+        ".js",
+        ".json",
+        ".jsx",
+        ".py",
+        ".rs",
+        ".sh",
+        ".toml",
+        ".ts",
+        ".tsx",
+        ".yaml",
+        ".yml",
+    }
     for path in tracked_files(repo):
-        if path == example or not path.is_file() or path.is_symlink():
+        rel = relative(repo, path)
+        if (
+            not unused
+            or path == example
+            or path.suffix not in source_suffixes
+            or not path.is_file()
+            or path.is_symlink()
+            or any(
+                part in {"docs", "fixtures", "generated", "node_modules", "target", "vendor"}
+                for part in pathlib.PurePosixPath(rel).parts
+            )
+            or path.stat().st_size > 1_000_000
+        ):
             continue
         try:
-            consumers.append(path.read_text())
+            text = path.read_text()
         except (OSError, UnicodeDecodeError):
             continue
-    corpus = "\n".join(consumers)
-    unused = [key for key in sorted(keys) if not re.search(rf"\b{re.escape(key)}\b", corpus)]
+        unused = {
+            key for key in unused if not re.search(rf"\b{re.escape(key)}\b", text)
+        }
     if not unused:
         return []
     return [
         Finding(
             "env-schema",
             ".env.example",
-            f"keys have no tracked consumer: {', '.join(unused)}",
+            f"keys have no tracked consumer: {', '.join(sorted(unused))}",
         )
     ]
 
@@ -472,7 +525,25 @@ def check_docs(repo: pathlib.Path) -> list[Finding]:
     findings: list[Finding] = []
     for path in tracked_files(repo):
         rel = relative(repo, path)
-        if not rel.startswith("docs/") or path.suffix != ".md":
+        parts = pathlib.PurePosixPath(rel).parts
+        if (
+            not rel.startswith("docs/")
+            or path.suffix != ".md"
+            or any(
+                part
+                in {
+                    "fixtures",
+                    "generated",
+                    "references",
+                    "sessions",
+                    "superpowers",
+                    "upstream",
+                    "upstream-api",
+                    "vendor",
+                }
+                for part in parts
+            )
+        ):
             continue
         missing = FRONTMATTER_KEYS - frontmatter_keys(path.read_text())
         if missing:
