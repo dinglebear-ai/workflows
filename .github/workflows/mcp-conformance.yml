@@ -40,7 +40,7 @@ jobs:
         with:
           ref: ${{ inputs.checkout-ref }}
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: ${{ inputs.node-version }}
       - name: Install pinned official conformance suite
@@ -70,4 +70,3 @@ jobs:
           path: ${{ inputs.results-path }}
           if-no-files-found: error
           retention-days: 14
-
