@@ -1,0 +1,42 @@
+name: Reusable fast Unraid plugin validation
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        type: string
+        default: "."
+      setup-command:
+        type: string
+        default: ""
+      validate-command:
+        type: string
+        required: true
+      timeout-minutes:
+        type: number
+        default: 10
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: [self-hosted, ci-pool-ops]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Install validation tools
+        if: inputs.setup-command != ''
+        env:
+          COMMAND: ${{ inputs.setup-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Validate plugin contracts
+        env:
+          COMMAND: ${{ inputs.validate-command }}
+        run: bash -euo pipefail -c "$COMMAND"

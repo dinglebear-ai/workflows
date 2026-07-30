@@ -48,9 +48,11 @@ class WorkflowLibraryTests(unittest.TestCase):
                 self.assertIn("@__WORKFLOWS_SHA__", text)
                 self.assertNotIn("@main", text)
 
-    def test_starter_inputs_match_reusable_interfaces(self) -> None:
-        for starter in sorted((ROOT / "starters").glob("*.yml")):
-            workflow = yaml.load(starter.read_text(), Loader=yaml.BaseLoader)
+    def test_caller_inputs_match_reusable_interfaces(self) -> None:
+        callers = list((ROOT / "starters").glob("*.yml"))
+        callers.extend((ROOT / "templates/callers").glob("*.yml"))
+        for caller in sorted(callers):
+            workflow = yaml.load(caller.read_text(), Loader=yaml.BaseLoader)
             for job_name, job in workflow["jobs"].items():
                 uses = job.get("uses", "")
                 if "dinglebear-ai/workflows/.github/workflows/" not in uses:
@@ -64,8 +66,18 @@ class WorkflowLibraryTests(unittest.TestCase):
                     reusable["on"]["workflow_call"].get("inputs", {})
                 )
                 supplied = set(job.get("with", {}))
-                with self.subTest(starter=starter.name, job=job_name):
+                with self.subTest(caller=caller.name, job=job_name):
                     self.assertFalse(supplied - accepted)
+
+    def test_release_caller_templates_are_release_only(self) -> None:
+        for caller in sorted((ROOT / "templates/callers").glob("*release.yml")):
+            workflow = yaml.load(caller.read_text(), Loader=yaml.BaseLoader)
+            with self.subTest(caller=caller.name):
+                self.assertEqual(set(workflow["on"]), {"release"})
+                self.assertEqual(
+                    workflow["on"]["release"]["types"],
+                    ["published"],
+                )
 
     def test_ci_images_pin_exact_base_manifests(self) -> None:
         for profile in ("rust", "python", "typescript"):

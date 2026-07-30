@@ -49,16 +49,30 @@ consumes the assets.
 immutable commit tag, smokes and scans its exact digest, then promotes that
 digest to the release tag.
 
+## Incus image
+
+`hosted-incus-image.yml` checks out the release identity, runs pinned
+repository-owned setup/validation/build/smoke scripts, generates an SBOM and
+checksum inventory, and retains the exact image directory. The full caller in
+`templates/callers/incus-image-release.yml` publishes it through
+`github-release.yml`.
+
+## Unraid plugin
+
+`unraid-plugin-validate.yml` keeps `.plg`, script, URL, version, and checksum
+contracts in fast CI. The release caller uses hosted `unraid-plugin-ci.yml` to
+package and checksum exact bytes, then `unraid-plugin-release.yml` to reverify
+and attach them to the existing release.
+
 ## Product-specific release output
 
 Use `hosted-release-command.yml` for a product-specific build that does not
 justify another reusable language workflow. The caller still owns the command,
 artifact name, release identity, and downstream publication order.
 
-Examples include a browser extension bundle, desktop palette application,
-Incus image archive, or generated plugin package. Reuse the hosted checkout,
-timeout, failure behavior, and artifact retention rather than cloning a whole
-workflow.
+Examples include a browser extension bundle or desktop palette application.
+Incus images and Unraid plugins have dedicated workflows because their
+build/smoke/checksum contracts repeat across the fleet.
 
 ## MCP
 

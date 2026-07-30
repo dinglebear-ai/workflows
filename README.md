@@ -69,7 +69,7 @@ the called workflow needs, especially `id-token: write`, `packages: write`,
 ## Workflow catalog
 
 [`catalog.json`](catalog.json) is the machine-readable inventory and profile
-map. The library currently contains 42 reusable workflows plus three internal
+map. The library currently contains 44 reusable workflows plus three internal
 control-plane workflows.
 
 ### Fast CI
@@ -98,7 +98,8 @@ control-plane workflows.
 - amd64 container build, smoke, scan, SBOM, provenance, and digest promotion.
 - GitHub release assets and attestations.
 - GitHub Pages.
-- Unraid plugin validation and release.
+- Incus image build, smoke, SBOM, checksums, and publication.
+- Unraid plugin fast validation, hosted packaging, and release.
 - Native x86_64 Python wheels and product-specific hosted release commands.
 - Three scanned CI job images for Rust, Python, and TypeScript.
 
@@ -198,6 +199,8 @@ repository's effective workflow version auditable.
   the 117 existing workspace workflows
 - [`docs/bootstrap.md`](docs/bootstrap.md) — new and existing repo setup
 - [`docs/containers.md`](docs/containers.md) — CI images
+- [`docs/incus-images.md`](docs/incus-images.md) — Incus image contract
+- [`docs/unraid-plugins.md`](docs/unraid-plugins.md) — Unraid plugin contract
 - [`docs/security.md`](docs/security.md) — trust and permission boundaries
 - [`docs/release-recipes.md`](docs/release-recipes.md) — publication graphs
 - [`docs/maintenance.md`](docs/maintenance.md) — upgrades and rollback
@@ -209,7 +212,7 @@ repository's effective workflow version auditable.
 bootstrap/           common and profile-specific repository defaults
 images/              Rust, Python, and TypeScript CI images
 starters/            event-owning caller workflows for new repositories
-templates/           opt-in installer and contract templates
+templates/           complete caller, installer, and contract templates
 scripts/             bootstrap and validation tools
 tests/               library contract tests
 docs/                complete architecture and operating guidance

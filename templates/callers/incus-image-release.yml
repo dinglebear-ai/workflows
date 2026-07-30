@@ -1,0 +1,39 @@
+name: Incus image release
+
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+concurrency:
+  group: incus-image-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    permissions:
+      contents: read
+    uses: dinglebear-ai/workflows/.github/workflows/hosted-incus-image.yml@__WORKFLOWS_SHA__
+    with:
+      checkout-ref: ${{ github.event.release.tag_name }}
+      setup-command: scripts/ci/setup-incus-builder.sh
+      validate-command: scripts/ci/validate-incus-image.sh
+      build-command: scripts/ci/build-incus-image.sh
+      smoke-command: scripts/ci/smoke-incus-image.sh
+      artifact-name: incus-image-${{ github.event.release.tag_name }}
+      artifact-directory: dist
+    secrets: inherit
+
+  publish:
+    needs: build
+    permissions:
+      contents: write
+      attestations: write
+      id-token: write
+    uses: dinglebear-ai/workflows/.github/workflows/github-release.yml@__WORKFLOWS_SHA__
+    with:
+      release-tag: ${{ github.event.release.tag_name }}
+      artifact-pattern: incus-image-${{ github.event.release.tag_name }}
+      artifact-path: release-artifacts
+    secrets: inherit

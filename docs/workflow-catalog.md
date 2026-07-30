@@ -1,6 +1,6 @@
 # Workflow catalog
 
-The catalog contains 42 reusable workflows plus three repository-internal
+The catalog contains 44 reusable workflows plus three repository-internal
 control-plane workflows. [`catalog.json`](../catalog.json) is authoritative.
 
 ## Calling a reusable workflow
@@ -47,6 +47,7 @@ Rules:
 | `hosted-ci-images-release.yml` | release | Container | Build, scan, and publish the three canonical CI images |
 | `hosted-container-release.yml` | release | Container | Build, smoke, scan, and promote one amd64 digest |
 | `hosted-go-release.yml` | release | Go | Build x86_64 Go archives and checksums |
+| `hosted-incus-image.yml` | release | Incus | Hosted x86_64 image build, smoke, SBOM, and checksums |
 | `hosted-python-package-release.yml` | release | Python | Build, verify, and trusted-publish wheel/sdist |
 | `hosted-python-wheels.yml` | release | Python | Native x86_64 wheels on hosted Linux/macOS/Windows |
 | `hosted-release-command.yml` | release | Release | Product command with exact hosted artifact retention |
@@ -69,8 +70,9 @@ Rules:
 | `stale.yml` | fast | Automation | Consistent stale lifecycle |
 | `synthetic-check.yml` | capability | Operations | Residential-egress synthetic |
 | `system-integration.yml` | capability | Operations | Privileged system/capability integration |
-| `unraid-plugin-ci.yml` | hybrid | Unraid | Build and validate one plugin artifact |
+| `unraid-plugin-ci.yml` | release | Unraid | Hosted package, exact validation, checksums, and retention |
 | `unraid-plugin-release.yml` | release | Unraid | Publish exact validated plugin bytes |
+| `unraid-plugin-validate.yml` | fast | Unraid | Static plugin, manifest, and script contracts |
 
 Internal workflows:
 
