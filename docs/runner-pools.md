@@ -1,3 +1,9 @@
+---
+title: Runner pools
+created: 2026-07-30
+updated: 2026-07-30
+---
+
 # Runner pools
 
 Every fast Linux job selects exactly one scheduling pool. Capability labels are

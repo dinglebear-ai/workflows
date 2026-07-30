@@ -1,3 +1,9 @@
+---
+title: Maintaining the workflow library
+created: 2026-07-30
+updated: 2026-07-30
+---
+
 # Maintaining the workflow library
 
 ## Change process

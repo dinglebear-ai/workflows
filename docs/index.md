@@ -1,3 +1,9 @@
+---
+title: Documentation
+created: 2026-07-30
+updated: 2026-07-30
+---
+
 # Documentation
 
 `dinglebear-ai/workflows` is both the canonical GitHub Actions library and the
@@ -16,6 +22,7 @@ new-repository bootstrap kit for the fleet.
 | [Unraid plugins](unraid-plugins.md) | Fast manifest validation and hosted package/release contract |
 | [Release recipes](release-recipes.md) | Release Please, artifacts, registries, and MCP ordering |
 | [Security](security.md) | Threat model, permissions, pinning, and self-hosted boundaries |
+| [Repository contract](repository-contract.md) | Metadata, toolchain, docs, config, and hygiene enforcement |
 | [Fleet reconciliation](fleet-reconciliation.md) | Mapping of all existing workflow families |
 | [Maintenance](maintenance.md) | Versioning, changes, caller upgrades, and rollback |
 

@@ -21,10 +21,18 @@ jobs:
     uses: dinglebear-ai/workflows/.github/workflows/repository-policy.yml@__WORKFLOWS_SHA__
     secrets: inherit
 
+  fleet-contract:
+    permissions:
+      contents: read
+    uses: dinglebear-ai/workflows/.github/workflows/fleet-contract.yml@__WORKFLOWS_SHA__
+    with:
+      profile: __PROFILE__
+    secrets: inherit
+
   policy:
     name: Policy
     if: always()
-    needs: [workflow-policy, repository-policy]
+    needs: [workflow-policy, repository-policy, fleet-contract]
     runs-on: [self-hosted, ci-pool-ops]
     timeout-minutes: 5
     permissions: {}

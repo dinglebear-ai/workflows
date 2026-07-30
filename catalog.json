@@ -4,6 +4,7 @@
   "caller_reference_policy": "full-commit-sha",
   "profiles": {
     "rust": [
+      "fleet-contract.yml",
       "fast-rust.yml",
       "rust-security.yml",
       "rust-docs.yml",
@@ -15,6 +16,7 @@
       "github-release.yml"
     ],
     "python": [
+      "fleet-contract.yml",
       "fast-python.yml",
       "python-security.yml",
       "codeql.yml",
@@ -24,6 +26,7 @@
       "github-release.yml"
     ],
     "node": [
+      "fleet-contract.yml",
       "fast-node.yml",
       "codeql.yml",
       "release-please.yml",
@@ -32,6 +35,7 @@
       "github-release.yml"
     ],
     "pnpm": [
+      "fleet-contract.yml",
       "fast-pnpm.yml",
       "codeql.yml",
       "release-please.yml",
@@ -40,6 +44,7 @@
       "pages-deploy.yml"
     ],
     "bun": [
+      "fleet-contract.yml",
       "fast-bun.yml",
       "codeql.yml",
       "release-please.yml",
@@ -65,6 +70,7 @@
       "unraid-plugin-release.yml"
     ],
     "repository": [
+      "fleet-contract.yml",
       "fleet-policy.yml",
       "repository-policy.yml",
       "install-contract.yml",
@@ -86,6 +92,7 @@
     {"file": "fast-pnpm.yml", "kind": "fast", "category": "typescript", "summary": "Locked pnpm audit, lint, typecheck, tests, contracts, and optional build."},
     {"file": "fast-python.yml", "kind": "fast", "category": "python", "summary": "Frozen uv sync, Ruff lint/format, ty typecheck, and Pytest."},
     {"file": "fast-rust.yml", "kind": "fast", "category": "rust", "summary": "Rust fmt, check, Clippy, targeted tests, and MinIO kache."},
+    {"file": "fleet-contract.yml", "kind": "fast", "category": "policy", "summary": "Enforce durable repository, metadata, toolchain, documentation, and hygiene contracts."},
     {"file": "fleet-policy.yml", "kind": "fast", "category": "policy", "summary": "Enforce runner, action pin, permission, timeout, ARM, and release boundaries."},
     {"file": "github-release.yml", "kind": "release", "category": "release", "summary": "Attest and attach exact workflow artifacts to an existing GitHub release."},
     {"file": "hosted-android-release.yml", "kind": "release", "category": "android", "summary": "Hosted Android release lint, tests, assembly, and managed-device evidence."},

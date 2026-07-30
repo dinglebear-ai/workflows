@@ -1,3 +1,9 @@
+---
+title: Release and publication recipes
+created: 2026-07-30
+updated: 2026-07-30
+---
+
 # Release and publication recipes
 
 ## Canonical graph

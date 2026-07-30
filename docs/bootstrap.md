@@ -1,3 +1,9 @@
+---
+title: Repository bootstrap
+created: 2026-07-30
+updated: 2026-07-30
+---
+
 # Repository bootstrap
 
 The bootstrap kit handles more than GitHub Actions. It installs the durable

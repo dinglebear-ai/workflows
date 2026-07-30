@@ -1,3 +1,9 @@
+---
+title: Unraid plugin workflow contract
+created: 2026-07-30
+updated: 2026-07-30
+---
+
 # Unraid plugin workflow contract
 
 Unraid plugins have two distinct lanes: fast source/manifest validation on the

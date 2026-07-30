@@ -1,3 +1,9 @@
+---
+title: Fleet workflow reconciliation
+created: 2026-07-30
+updated: 2026-07-30
+---
+
 # Fleet workflow reconciliation
 
 ## Scope and result
