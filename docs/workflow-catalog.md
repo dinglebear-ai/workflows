@@ -41,7 +41,7 @@ Rules:
 | `drift-monitor.yml` | fast | Automation | Run an upstream/schema drift command and retain evidence |
 | `fast-bun.yml` | fast | TypeScript | Locked Bun audit, lint, typecheck, tests, optional build |
 | `fast-go.yml` | fast | Go | Vulnerability, module, generation, vet, and unit checks |
-| `fast-node.yml` | fast | TypeScript | Locked npm audit, lint, typecheck, tests, contracts; cache can be disabled for dependency-free launchers without a lockfile |
+| `fast-node.yml` | fast | TypeScript | Locked npm audit, lint, typecheck, tests, contracts; cache can be disabled and an optional Python toolchain can support mixed Node/Python projects |
 | `fast-ops.yml` | fast | Operations | Actionlint, ShellCheck, Bash parsing, policy command |
 | `fast-pnpm.yml` | fast | TypeScript | Locked pnpm audit, lint, typecheck, tests, contracts |
 | `fast-python.yml` | fast | Python | Frozen uv sync, Ruff lint/format, ty typecheck, Pytest |

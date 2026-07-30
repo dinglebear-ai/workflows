@@ -7,6 +7,10 @@ on:
         description: Repository contract profile.
         type: string
         required: true
+      implementation-ref:
+        description: Exact workflows repository commit containing the contract implementation.
+        type: string
+        required: true
       timeout-minutes:
         type: number
         default: 5
@@ -28,7 +32,7 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           repository: dinglebear-ai/workflows
-          ref: ${{ github.workflow_sha }}
+          ref: ${{ inputs.implementation-ref }}
           path: workflow-library
           persist-credentials: false
       - name: Validate repository contract
