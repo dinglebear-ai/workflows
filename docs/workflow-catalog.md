@@ -41,7 +41,7 @@ Rules:
 | `drift-monitor.yml` | fast | Automation | Run an upstream/schema drift command and retain evidence |
 | `fast-bun.yml` | fast | TypeScript | Locked Bun audit, lint, typecheck, tests, optional build |
 | `fast-go.yml` | fast | Go | Vulnerability, module, generation, vet, and unit checks |
-| `fast-node.yml` | fast | TypeScript | Locked npm audit, lint, typecheck, tests, contracts |
+| `fast-node.yml` | fast | TypeScript | Locked npm audit, lint, typecheck, tests, contracts; cache can be disabled for dependency-free launchers without a lockfile |
 | `fast-ops.yml` | fast | Operations | Actionlint, ShellCheck, Bash parsing, policy command |
 | `fast-pnpm.yml` | fast | TypeScript | Locked pnpm audit, lint, typecheck, tests, contracts |
 | `fast-python.yml` | fast | Python | Frozen uv sync, Ruff lint/format, ty typecheck, Pytest |
@@ -64,7 +64,7 @@ Rules:
 | `marketplace-ci.yml` | fast | Marketplace | Structural validation and installation smoke |
 | `mcp-conformance.yml` | release | MCP | Pinned official full MCP conformance evidence |
 | `mcp-registry-publish.yml` | release | MCP | Official MCP Registry publication and verification |
-| `npm-trusted-publish.yml` | release | TypeScript | Pack, verify, and OIDC-publish exact npm tarball |
+| `npm-trusted-publish.yml` | release | TypeScript | Pack, verify, and OIDC-publish exact npm tarball, including dependency-free packages without lockfiles |
 | `pages-deploy.yml` | deployment | TypeScript | Build and deploy Pages with split permissions |
 | `python-security.yml` | fast | Python | Audit a frozen dependency export |
 | `release-please.yml` | fast | Release | Serialize Release Please and emit release identity |
