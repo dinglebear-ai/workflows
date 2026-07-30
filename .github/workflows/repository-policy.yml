@@ -1,0 +1,52 @@
+name: Reusable repository policy
+
+on:
+  workflow_call:
+    inputs:
+      maximum-file-bytes:
+        type: number
+        default: 1048576
+      required-files:
+        type: string
+        default: "README.md LICENSE SECURITY.md CLAUDE.md AGENTS.md GEMINI.md"
+      timeout-minutes:
+        type: number
+        default: 10
+
+permissions:
+  contents: read
+
+jobs:
+  repository-policy:
+    runs-on: [self-hosted, ci-pool-ops]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Required repository files
+        env:
+          REQUIRED_FILES: ${{ inputs.required-files }}
+        run: |
+          set -euo pipefail
+          read -r -a required <<< "$REQUIRED_FILES"
+          for path in "${required[@]}"; do
+            test -e "$path" || { printf 'missing required file: %s\n' "$path" >&2; exit 1; }
+          done
+          test -L AGENTS.md && [[ "$(readlink AGENTS.md)" == "CLAUDE.md" ]]
+          test -L GEMINI.md && [[ "$(readlink GEMINI.md)" == "CLAUDE.md" ]]
+      - name: Reject oversized tracked files
+        env:
+          MAXIMUM_FILE_BYTES: ${{ inputs.maximum-file-bytes }}
+        run: |
+          set -euo pipefail
+          failed=0
+          while IFS= read -r -d '' path; do
+            size="$(stat --format '%s' "$path")"
+            if (( size > MAXIMUM_FILE_BYTES )); then
+              printf '%s is %s bytes; limit is %s\n' "$path" "$size" "$MAXIMUM_FILE_BYTES" >&2
+              failed=1
+            fi
+          done < <(git ls-files -z)
+          exit "$failed"

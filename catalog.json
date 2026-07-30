@@ -6,6 +6,7 @@
     "rust": [
       "fast-rust.yml",
       "rust-security.yml",
+      "rust-docs.yml",
       "codeql.yml",
       "release-please.yml",
       "hosted-rust-release.yml",
@@ -19,6 +20,7 @@
       "codeql.yml",
       "release-please.yml",
       "hosted-python-package-release.yml",
+      "hosted-python-wheels.yml",
       "github-release.yml"
     ],
     "node": [
@@ -50,16 +52,28 @@
       "mcp-registry-publish.yml"
     ],
     "container": [
-      "hosted-container-release.yml"
+      "hosted-container-release.yml",
+      "hosted-ci-images-release.yml"
     ],
     "unraid-plugin": [
       "unraid-plugin-ci.yml",
       "unraid-plugin-release.yml"
+    ],
+    "repository": [
+      "fleet-policy.yml",
+      "repository-policy.yml",
+      "install-contract.yml",
+      "repository-labeler.yml",
+      "stale.yml",
+      "dependabot-automerge.yml",
+      "drift-monitor.yml"
     ]
   },
   "workflows": [
     {"file": "cargo-publish.yml", "kind": "release", "category": "rust", "summary": "Verify and publish one immutable crates.io version."},
     {"file": "codeql.yml", "kind": "fast", "category": "security", "summary": "Run one language-specific CodeQL analysis lane."},
+    {"file": "dependabot-automerge.yml", "kind": "fast", "category": "automation", "summary": "Approve and auto-merge explicitly allowed Dependabot update classes."},
+    {"file": "drift-monitor.yml", "kind": "fast", "category": "automation", "summary": "Run a repository-owned upstream or schema drift command and retain evidence."},
     {"file": "fast-bun.yml", "kind": "fast", "category": "typescript", "summary": "Locked Bun audit, lint, typecheck, tests, and optional build."},
     {"file": "fast-go.yml", "kind": "fast", "category": "go", "summary": "Go vulnerability scan, module verification, generation, vet, and tests."},
     {"file": "fast-node.yml", "kind": "fast", "category": "typescript", "summary": "Locked npm audit, lint, typecheck, tests, contracts, and optional build."},
@@ -71,21 +85,31 @@
     {"file": "github-release.yml", "kind": "release", "category": "release", "summary": "Attest and attach exact workflow artifacts to an existing GitHub release."},
     {"file": "hosted-android-release.yml", "kind": "release", "category": "android", "summary": "Hosted Android release lint, tests, assembly, and managed-device evidence."},
     {"file": "hosted-bun-web-release.yml", "kind": "release", "category": "typescript", "summary": "Hosted Bun coverage, production build, E2E, and artifact assembly."},
+    {"file": "hosted-ci-images-release.yml", "kind": "release", "category": "container", "summary": "Build, scan, and publish the canonical Rust, Python, and TypeScript CI images."},
     {"file": "hosted-container-release.yml", "kind": "release", "category": "container", "summary": "Build, smoke, scan, attest, and promote one linux/amd64 digest."},
     {"file": "hosted-go-release.yml", "kind": "release", "category": "go", "summary": "Build x86_64 Go release archives and checksums."},
     {"file": "hosted-python-package-release.yml", "kind": "release", "category": "python", "summary": "Build, verify, and trusted-publish wheel and sdist artifacts."},
+    {"file": "hosted-python-wheels.yml", "kind": "release", "category": "python", "summary": "Build native x86_64 Python wheels on hosted Linux, macOS, and Windows."},
+    {"file": "hosted-release-command.yml", "kind": "release", "category": "release", "summary": "Run one product-specific hosted release command and retain exact outputs."},
     {"file": "hosted-rust-platform-release.yml", "kind": "release", "category": "rust", "summary": "Build native Linux, macOS, and Windows x86_64 Rust artifacts."},
     {"file": "hosted-rust-release.yml", "kind": "release", "category": "rust", "summary": "Build one hosted Rust release artifact with MinIO kache."},
     {"file": "hosted-web-release.yml", "kind": "release", "category": "typescript", "summary": "Hosted npm or pnpm coverage, production build, performance, and browser E2E."},
+    {"file": "install-contract.yml", "kind": "fast", "category": "policy", "summary": "Validate shell installers and repository-owned release asset agreement."},
     {"file": "marketplace-ci.yml", "kind": "fast", "category": "marketplace", "summary": "Parallel Python structural validation and Node installation smoke."},
+    {"file": "manage-release.yml", "kind": "internal", "category": "release", "summary": "Run Release Please for this canonical workflow library."},
     {"file": "mcp-conformance.yml", "kind": "release", "category": "mcp", "summary": "Run the pinned official full MCP conformance suite and retain evidence."},
     {"file": "mcp-registry-publish.yml", "kind": "release", "category": "mcp", "summary": "Publish verified server metadata to the official MCP Registry."},
     {"file": "npm-trusted-publish.yml", "kind": "release", "category": "typescript", "summary": "Pack, verify, and trusted-publish the exact npm tarball."},
     {"file": "pages-deploy.yml", "kind": "deployment", "category": "typescript", "summary": "Build and deploy GitHub Pages with split permissions."},
     {"file": "python-security.yml", "kind": "fast", "category": "python", "summary": "Audit a frozen Python dependency export."},
+    {"file": "publish-ci-images.yml", "kind": "internal", "category": "container", "summary": "Publish canonical CI images only from a GitHub release."},
     {"file": "release-please.yml", "kind": "fast", "category": "release", "summary": "Serialize Release Please and emit immutable release identity."},
+    {"file": "repository-labeler.yml", "kind": "fast", "category": "automation", "summary": "Apply pull-request labels from repository-owned path rules."},
+    {"file": "repository-policy.yml", "kind": "fast", "category": "policy", "summary": "Enforce required files, agent-memory symlinks, and tracked file size."},
+    {"file": "rust-docs.yml", "kind": "fast", "category": "rust", "summary": "Build workspace Rust documentation with warnings denied."},
     {"file": "rust-msrv.yml", "kind": "fast", "category": "rust", "summary": "Enforce an explicitly declared Rust minimum toolchain."},
     {"file": "rust-security.yml", "kind": "fast", "category": "rust", "summary": "Run pinned cargo-deny policy."},
+    {"file": "stale.yml", "kind": "fast", "category": "automation", "summary": "Apply a consistent stale issue and pull-request lifecycle."},
     {"file": "synthetic-check.yml", "kind": "capability", "category": "operations", "summary": "Run a small residential-egress synthetic and retain failure evidence."},
     {"file": "system-integration.yml", "kind": "capability", "category": "operations", "summary": "Run fail-closed privileged integration on a capability-labelled runner."},
     {"file": "unraid-plugin-ci.yml", "kind": "hybrid", "category": "unraid", "summary": "Build and validate one Unraid plugin artifact once."},
@@ -93,4 +117,3 @@
     {"file": "validate-library.yml", "kind": "internal", "category": "policy", "summary": "Validate this workflow control-plane repository independently of the farm."}
   ]
 }
-

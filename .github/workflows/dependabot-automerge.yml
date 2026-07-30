@@ -1,0 +1,49 @@
+name: Reusable Dependabot auto-merge
+
+on:
+  workflow_call:
+    inputs:
+      allowed-update-types:
+        type: string
+        default: "version-update:semver-patch,version-update:semver-minor"
+      merge-method:
+        type: string
+        default: squash
+      timeout-minutes:
+        type: number
+        default: 5
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dependabot-automerge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: [self-hosted, ci-pool-ops]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - name: Read Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a # v2
+        with:
+          github-token: ${{ github.token }}
+      - name: Approve and enable auto-merge
+        env:
+          ALLOWED_UPDATE_TYPES: ${{ inputs.allowed-update-types }}
+          GH_TOKEN: ${{ github.token }}
+          MERGE_METHOD: ${{ inputs.merge-method }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+        run: |
+          set -euo pipefail
+          case ",$ALLOWED_UPDATE_TYPES," in
+            *",$UPDATE_TYPE,"*) ;;
+            *) printf 'Dependabot update type %s requires review\n' "$UPDATE_TYPE"; exit 0 ;;
+          esac
+          case "$MERGE_METHOD" in
+            merge|rebase|squash) ;;
+            *) printf 'invalid merge method: %s\n' "$MERGE_METHOD" >&2; exit 2 ;;
+          esac
+          gh pr review --approve "$PR_URL"
+          gh pr merge --auto "--$MERGE_METHOD" "$PR_URL"

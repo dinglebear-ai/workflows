@@ -1,0 +1,40 @@
+name: Reusable Rust documentation check
+
+on:
+  workflow_call:
+    inputs:
+      toolchain:
+        type: string
+        default: "1.97.1"
+      working-directory:
+        type: string
+        default: "."
+      command:
+        type: string
+        default: cargo doc --workspace --all-features --no-deps --locked
+      timeout-minutes:
+        type: number
+        default: 20
+
+permissions:
+  contents: read
+
+jobs:
+  rustdoc:
+    runs-on: [self-hosted, ci-pool-rust]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: ${{ inputs.toolchain }}
+      - name: Build documentation with warnings denied
+        env:
+          COMMAND: ${{ inputs.command }}
+          RUSTDOCFLAGS: -D warnings
+        run: bash -euo pipefail -c "$COMMAND"

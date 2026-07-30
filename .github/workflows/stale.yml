@@ -1,0 +1,38 @@
+name: Reusable stale issue and pull-request cleanup
+
+on:
+  workflow_call:
+    inputs:
+      days-before-stale:
+        type: number
+        default: 60
+      days-before-close:
+        type: number
+        default: 14
+      exempt-labels:
+        type: string
+        default: "pinned,security,never-stale"
+      timeout-minutes:
+        type: number
+        default: 10
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: [self-hosted, ci-pool-ops]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/stale@1e223db275d687790206a7acac4d1a11bd6fe629 # v10
+        with:
+          repo-token: ${{ github.token }}
+          days-before-stale: ${{ inputs.days-before-stale }}
+          days-before-close: ${{ inputs.days-before-close }}
+          exempt-issue-labels: ${{ inputs.exempt-labels }}
+          exempt-pr-labels: ${{ inputs.exempt-labels }}
+          stale-issue-message: This issue is stale because it has had no recent activity.
+          stale-pr-message: This pull request is stale because it has had no recent activity.
+          close-issue-message: Closing after the documented stale period.
+          close-pr-message: Closing after the documented stale period.

@@ -1,0 +1,29 @@
+name: Reusable pull-request labeler
+
+on:
+  workflow_call:
+    inputs:
+      configuration-path:
+        type: string
+        default: .github/labeler.yml
+      sync-labels:
+        type: boolean
+        default: true
+      timeout-minutes:
+        type: number
+        default: 5
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: [self-hosted, ci-pool-ops]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/labeler@b8dd2d9be0f68b860e7dae5dae7d772984eacd6d # v6
+        with:
+          configuration-path: ${{ inputs.configuration-path }}
+          repo-token: ${{ github.token }}
+          sync-labels: ${{ inputs.sync-labels }}

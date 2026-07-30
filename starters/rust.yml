@@ -29,7 +29,7 @@ jobs:
     uses: dinglebear-ai/workflows/.github/workflows/codeql.yml@__WORKFLOWS_SHA__
     with:
       language: rust
-      runner-labels: '["self-hosted","ci-pool-rust"]'
+      runner-labels-json: '["self-hosted","ci-pool-rust"]'
     secrets: inherit
   ci:
     name: CI

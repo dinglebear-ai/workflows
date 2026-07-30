@@ -1,0 +1,44 @@
+name: Reusable upstream or schema drift monitor
+
+on:
+  workflow_call:
+    inputs:
+      command:
+        type: string
+        required: true
+      artifact-name:
+        type: string
+        default: drift-evidence
+      artifact-path:
+        type: string
+        default: artifacts/drift
+      retention-days:
+        type: number
+        default: 14
+      timeout-minutes:
+        type: number
+        default: 15
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    runs-on: [self-hosted, ci-pool-ops]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Inspect upstream contract
+        env:
+          COMMAND: ${{ inputs.command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Retain drift evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.artifact-path }}
+          if-no-files-found: warn
+          retention-days: ${{ inputs.retention-days }}
