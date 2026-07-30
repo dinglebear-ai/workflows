@@ -79,7 +79,7 @@
     {"file": "fast-node.yml", "kind": "fast", "category": "typescript", "summary": "Locked npm audit, lint, typecheck, tests, contracts, and optional build."},
     {"file": "fast-ops.yml", "kind": "fast", "category": "operations", "summary": "Actionlint, ShellCheck, bash parsing, and repository policy."},
     {"file": "fast-pnpm.yml", "kind": "fast", "category": "typescript", "summary": "Locked pnpm audit, lint, typecheck, tests, contracts, and optional build."},
-    {"file": "fast-python.yml", "kind": "fast", "category": "python", "summary": "Frozen uv sync, Ruff, typecheck, and Pytest."},
+    {"file": "fast-python.yml", "kind": "fast", "category": "python", "summary": "Frozen uv sync, Ruff lint/format, ty typecheck, and Pytest."},
     {"file": "fast-rust.yml", "kind": "fast", "category": "rust", "summary": "Rust fmt, check, Clippy, targeted tests, and MinIO kache."},
     {"file": "fleet-policy.yml", "kind": "fast", "category": "policy", "summary": "Enforce runner, action pin, permission, timeout, ARM, and release boundaries."},
     {"file": "github-release.yml", "kind": "release", "category": "release", "summary": "Attest and attach exact workflow artifacts to an existing GitHub release."},

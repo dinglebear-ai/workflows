@@ -75,7 +75,8 @@ control-plane workflows.
 ### Fast CI
 
 - Rust: fmt, check, Clippy, targeted tests, kache, cargo-deny, optional MSRV.
-- Python: frozen uv sync, Ruff, typecheck, Pytest, and pip-audit.
+- Python: frozen uv sync, Ruff lint/format, ty type checking, Pytest, and
+  pip-audit.
 - TypeScript/Node: npm, pnpm, and Bun variants with locked installs, audits,
   lint, typecheck, tests, contracts, and optional fast builds.
 - Go: module verification, generation drift, vet, tests, and govulncheck.

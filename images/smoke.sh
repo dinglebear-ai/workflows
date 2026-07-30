@@ -27,6 +27,9 @@ case "$profile" in
     python --version
     pip --version
     pip-audit --version
+    pytest --version
+    ruff --version
+    ty --version
     uv --version
     ;;
   typescript)

@@ -8,7 +8,7 @@ stable toolchain inside a GitHub Actions job container.
 | Image | Pinned floor |
 |---|---|
 | `ghcr.io/dinglebear-ai/workflows-ci-rust` | Rust 1.97.1, Clippy, rustfmt, cargo-nextest 0.9.140, cargo-deny 0.20.2, cargo-audit 0.22.2, kache 0.12.0 |
-| `ghcr.io/dinglebear-ai/workflows-ci-python` | Python 3.14.6, uv 0.11.31, pip-audit 2.9.0 |
+| `ghcr.io/dinglebear-ai/workflows-ci-python` | Python 3.14.6, uv 0.11.31, Ruff 0.16.0, ty 0.0.65, Pytest 9.1.1, pip-audit 2.9.0 |
 | `ghcr.io/dinglebear-ai/workflows-ci-typescript` | Node 24.18.0, npm, pnpm 11.15.1, Bun 1.3.14 |
 
 Base images are pinned to the exact upstream Linux amd64 manifest digest.
@@ -30,6 +30,9 @@ jobs:
         with:
           persist-credentials: false
       - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run ty check
       - run: uv run pytest
 ```
 

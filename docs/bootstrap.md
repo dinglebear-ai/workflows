@@ -70,6 +70,19 @@ Project manifests are deliberately not generated. A generic `Cargo.toml`,
 Language-native project generators should create those files; this kit adds the
 fleet contract around them.
 
+The Python contract is uv for environments and locking, Ruff for linting and
+formatting, ty for type checking, and Pytest for tests. Add the tools to the
+project's locked development group:
+
+```bash
+uv add --dev ruff ty pytest
+```
+
+The reusable workflow then runs `uv sync --frozen`,
+`uv run ruff check .`, `uv run ruff format --check .`, `uv run ty check`, and
+`uv run pytest -q`. Repositories may override the sync command when their
+dependency-group name differs.
+
 ## After bootstrap
 
 1. Review every generated file before committing.

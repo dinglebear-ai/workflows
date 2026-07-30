@@ -2,6 +2,9 @@
 FROM python:3.14.6-slim-bookworm@sha256:f70215e5dbe2a47dee6d23f9c6d358bf3c148f59cce2fd165b61118e9d80f2bb
 
 ARG PIP_AUDIT_VERSION=2.9.0
+ARG PYTEST_VERSION=9.1.1
+ARG RUFF_VERSION=0.16.0
+ARG TY_VERSION=0.0.65
 ARG UV_VERSION=0.11.31
 
 LABEL org.opencontainers.image.source="https://github.com/dinglebear-ai/workflows" \
@@ -31,6 +34,9 @@ RUN apt-get update \
 
 RUN python -m pip install --no-cache-dir \
       "pip-audit==${PIP_AUDIT_VERSION}" \
+      "pytest==${PYTEST_VERSION}" \
+      "ruff==${RUFF_VERSION}" \
+      "ty==${TY_VERSION}" \
       "uv==${UV_VERSION}"
 
 COPY images/smoke.sh /usr/local/bin/ci-image-smoke

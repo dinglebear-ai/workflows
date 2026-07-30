@@ -77,6 +77,16 @@ class WorkflowLibraryTests(unittest.TestCase):
                 self.assertRegex(first_from, r"@sha256:[0-9a-f]{64}$")
                 self.assertIn("ci-image-smoke", dockerfile)
 
+    def test_python_contract_uses_uv_ruff_ty_and_pytest(self) -> None:
+        workflow = (ROOT / ".github/workflows/fast-python.yml").read_text()
+        dockerfile = (ROOT / "images/python/Dockerfile").read_text()
+        smoke = (ROOT / "images/smoke.sh").read_text()
+        for tool in ("uv", "ruff", "ty", "pytest"):
+            with self.subTest(tool=tool):
+                self.assertIn(tool, workflow)
+                self.assertIn(tool, dockerfile)
+                self.assertIn(f"{tool} --version", smoke)
+
     def test_bootstrap_profiles_create_immutable_callers(self) -> None:
         bootstrap = ROOT / "scripts" / "bootstrap.sh"
         release_types = {

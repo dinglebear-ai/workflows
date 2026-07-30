@@ -38,7 +38,7 @@ Rules:
 | `fast-node.yml` | fast | TypeScript | Locked npm audit, lint, typecheck, tests, contracts |
 | `fast-ops.yml` | fast | Operations | Actionlint, ShellCheck, Bash parsing, policy command |
 | `fast-pnpm.yml` | fast | TypeScript | Locked pnpm audit, lint, typecheck, tests, contracts |
-| `fast-python.yml` | fast | Python | Frozen uv sync, Ruff, typecheck, Pytest |
+| `fast-python.yml` | fast | Python | Frozen uv sync, Ruff lint/format, ty typecheck, Pytest |
 | `fast-rust.yml` | fast | Rust | fmt, check, Clippy, targeted tests, MinIO kache |
 | `fleet-policy.yml` | fast | Policy | Runner, action, permission, timeout, architecture, release policy |
 | `github-release.yml` | release | Release | Attest and attach exact artifacts to an existing release |
