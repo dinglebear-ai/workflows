@@ -8,13 +8,13 @@ on:
         default: "3.12"
       uv-version:
         type: string
-        default: "0.8.4"
+        default: "0.11.31"
       working-directory:
         type: string
         default: "."
       sync-command:
         type: string
-        default: uv sync --frozen --extra test
+        default: uv sync --frozen
       lint-command:
         type: string
         default: uv run ruff check .
@@ -23,7 +23,7 @@ on:
         default: uv run ruff format --check .
       typecheck-command:
         type: string
-        default: ""
+        default: uv run ty check
       test-command:
         type: string
         default: uv run pytest -q
@@ -67,7 +67,6 @@ jobs:
           COMMAND: ${{ inputs.format-command }}
         run: bash -euo pipefail -c "$COMMAND"
       - name: Typecheck
-        if: inputs.typecheck-command != ''
         env:
           COMMAND: ${{ inputs.typecheck-command }}
         run: bash -euo pipefail -c "$COMMAND"

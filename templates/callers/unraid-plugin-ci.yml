@@ -1,0 +1,29 @@
+name: Unraid plugin validation
+
+on:
+  pull_request:
+    paths:
+      - "unraid-plugin/**"
+      - "scripts/ci/validate-unraid-plugin.sh"
+      - ".github/workflows/unraid-plugin-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "unraid-plugin/**"
+      - "scripts/ci/validate-unraid-plugin.sh"
+      - ".github/workflows/unraid-plugin-ci.yml"
+
+permissions: {}
+
+concurrency:
+  group: unraid-plugin-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  validate:
+    permissions:
+      contents: read
+    uses: dinglebear-ai/workflows/.github/workflows/unraid-plugin-validate.yml@__WORKFLOWS_SHA__
+    with:
+      validate-command: scripts/ci/validate-unraid-plugin.sh
+    secrets: inherit

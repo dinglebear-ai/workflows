@@ -28,11 +28,11 @@ then independently maintain the implementation.
 
 ## Quick start
 
-Choose a starter and install it into a new checkout:
+Bootstrap a new checkout with the complete repository floor:
 
 ```bash
-cd ~/workspace/workflows
-./scripts/bootstrap.sh rust ~/workspace/my-new-repo
+curl -fsSL https://raw.githubusercontent.com/dinglebear-ai/workflows/main/install.sh \
+  | bash -s -- rust ~/workspace/my-new-repo
 ```
 
 Available starters:
@@ -43,9 +43,12 @@ Available starters:
 - `pnpm`
 - `bun`
 
-The bootstrap script resolves the current `dinglebear-ai/workflows` commit and
-embeds that immutable SHA in the caller. It refuses to overwrite an existing
-workflow unless `--force` is supplied.
+The installer resolves `main` to a full commit before downloading the bootstrap
+kit and embeds that immutable SHA in every caller. It installs CI, policy,
+Release Please, community/security files, agent-memory symlinks, documentation
+layout, Dependabot, and profile-specific repository defaults. It refuses to
+overwrite existing files unless `--force` is supplied. See
+[`docs/bootstrap.md`](docs/bootstrap.md).
 
 A direct caller looks like:
 
@@ -66,18 +69,22 @@ the called workflow needs, especially `id-token: write`, `packages: write`,
 ## Workflow catalog
 
 [`catalog.json`](catalog.json) is the machine-readable inventory and profile
-map. The library currently covers:
+map. The library currently contains 44 reusable workflows plus three internal
+control-plane workflows.
 
 ### Fast CI
 
 - Rust: fmt, check, Clippy, targeted tests, kache, cargo-deny, optional MSRV.
-- Python: frozen uv sync, Ruff, typecheck, Pytest, and pip-audit.
+- Python: frozen uv sync, Ruff lint/format, ty type checking, Pytest, and
+  pip-audit.
 - TypeScript/Node: npm, pnpm, and Bun variants with locked installs, audits,
   lint, typecheck, tests, contracts, and optional fast builds.
 - Go: module verification, generation drift, vet, tests, and govulncheck.
 - CodeQL: one language/pool per call.
 - Shell/operations: actionlint, ShellCheck, `bash -n`, and policy commands.
 - Marketplace/plugin validation and residential synthetics.
+- Repository policy, labeler, stale lifecycle, Dependabot automation, installer
+  contracts, rustdoc, and generic drift monitoring.
 
 ### Hosted release and deployment
 
@@ -91,7 +98,10 @@ map. The library currently covers:
 - amd64 container build, smoke, scan, SBOM, provenance, and digest promotion.
 - GitHub release assets and attestations.
 - GitHub Pages.
-- Unraid plugin validation and release.
+- Incus image build, smoke, SBOM, checksums, and publication.
+- Unraid plugin fast validation, hosted packaging, and release.
+- Native x86_64 Python wheels and product-specific hosted release commands.
+- Three scanned CI job images for Rust, Python, and TypeScript.
 
 ### MCP
 
@@ -181,14 +191,31 @@ long-lived publication tokens.
 Do not force-move a tag to update callers. Immutable SHA references make each
 repository's effective workflow version auditable.
 
+## Documentation
+
+- [`docs/index.md`](docs/index.md) — documentation map
+- [`docs/workflow-catalog.md`](docs/workflow-catalog.md) — all reusable shapes
+- [`docs/fleet-reconciliation.md`](docs/fleet-reconciliation.md) — mapping of
+  the 117 existing workspace workflows
+- [`docs/bootstrap.md`](docs/bootstrap.md) — new and existing repo setup
+- [`docs/containers.md`](docs/containers.md) — CI images
+- [`docs/incus-images.md`](docs/incus-images.md) — Incus image contract
+- [`docs/unraid-plugins.md`](docs/unraid-plugins.md) — Unraid plugin contract
+- [`docs/security.md`](docs/security.md) — trust and permission boundaries
+- [`docs/release-recipes.md`](docs/release-recipes.md) — publication graphs
+- [`docs/maintenance.md`](docs/maintenance.md) — upgrades and rollback
+
 ## Repository layout
 
 ```text
 .github/workflows/   reusable workflow implementations
+bootstrap/           common and profile-specific repository defaults
+images/              Rust, Python, and TypeScript CI images
 starters/            event-owning caller workflows for new repositories
+templates/           complete caller, installer, and contract templates
 scripts/             bootstrap and validation tools
 tests/               library contract tests
-docs/                architecture and operating guidance
+docs/                complete architecture and operating guidance
 catalog.json         workflow and profile inventory
 ```
 
@@ -199,6 +226,8 @@ python -m pip install PyYAML==6.0.2
 python scripts/validate.py
 python -m unittest discover -s tests -v
 actionlint -config-file .github/actionlint.yaml
+shellcheck install.sh scripts/*.sh images/smoke.sh
+./scripts/test-images.sh
 ```
 
 The validator fails on uncatalogued workflows, mutable actions, missing
@@ -213,4 +242,3 @@ or self-hosted release jobs.
 - [MCP Registry GitHub Actions guide](https://github.com/modelcontextprotocol/registry/blob/main/docs/modelcontextprotocol-io/github-actions.mdx)
 - [Official MCP conformance suite](https://github.com/modelcontextprotocol/conformance)
 - [Cargo publishing](https://doc.rust-lang.org/cargo/reference/publishing.html)
-

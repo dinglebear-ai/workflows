@@ -1,0 +1,42 @@
+name: Reusable installer and release-asset contract
+
+on:
+  workflow_call:
+    inputs:
+      installer:
+        type: string
+        default: install.sh
+      contract-command:
+        type: string
+        required: true
+      timeout-minutes:
+        type: number
+        default: 10
+
+permissions:
+  contents: read
+
+jobs:
+  install-contract:
+    runs-on: [self-hosted, ci-pool-ops]
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Validate installer shell
+        env:
+          INSTALLER: ${{ inputs.installer }}
+        run: |
+          set -euo pipefail
+          test -f "$INSTALLER"
+          bash -n "$INSTALLER"
+          shellcheck "$INSTALLER"
+          if grep -nE 'github\.com/jmagar/|raw\.githubusercontent\.com/jmagar/' "$INSTALLER"; then
+            printf 'installer relies on a legacy owner redirect\n' >&2
+            exit 1
+          fi
+      - name: Validate asset agreement
+        env:
+          COMMAND: ${{ inputs.contract-command }}
+        run: bash -euo pipefail -c "$COMMAND"

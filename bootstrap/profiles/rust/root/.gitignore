@@ -1,0 +1,16 @@
+/target/
+**/*.rs.bk
+*.profraw
+*.profdata
+.env
+.env.*
+!.env.example
+/config.toml
+.worktrees/
+.beads/
+.dolt/
+.lavra/
+.superpowers/
+.DS_Store
+*.swp
+*~

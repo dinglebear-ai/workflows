@@ -1,0 +1,89 @@
+name: Reusable hosted Incus image build
+
+on:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        type: string
+        required: true
+      setup-command:
+        type: string
+        required: true
+      validate-command:
+        type: string
+        required: true
+      build-command:
+        type: string
+        required: true
+      smoke-command:
+        type: string
+        required: true
+      artifact-name:
+        type: string
+        required: true
+      artifact-directory:
+        type: string
+        default: dist
+      timeout-minutes:
+        type: number
+        default: 120
+
+permissions:
+  contents: read
+
+jobs:
+  incus-image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          persist-credentials: false
+      - name: Install pinned Incus image tooling
+        env:
+          COMMAND: ${{ inputs.setup-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Validate image definition and scripts
+        env:
+          COMMAND: ${{ inputs.validate-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Build and export x86_64 image
+        env:
+          COMMAND: ${{ inputs.build-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Smoke exported image
+        env:
+          COMMAND: ${{ inputs.smoke-command }}
+        run: bash -euo pipefail -c "$COMMAND"
+      - name: Require image output
+        env:
+          ARTIFACT_DIRECTORY: ${{ inputs.artifact-directory }}
+        run: find "$ARTIFACT_DIRECTORY" -type f -print -quit | grep -q .
+      - name: Generate image SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610
+        with:
+          path: ${{ inputs.artifact-directory }}
+          format: spdx-json
+          output-file: ${{ inputs.artifact-directory }}/image.spdx.json
+          upload-artifact: false
+      - name: Generate exact checksum inventory
+        env:
+          ARTIFACT_DIRECTORY: ${{ inputs.artifact-directory }}
+        run: |
+          set -euo pipefail
+          (
+            cd "$ARTIFACT_DIRECTORY"
+            checksum_inventory="$(mktemp)"
+            find . -type f ! -name SHA256SUMS -print0 |
+              sort -z |
+              xargs -0 sha256sum > "$checksum_inventory"
+            mv "$checksum_inventory" SHA256SUMS
+            sha256sum --check --strict SHA256SUMS
+          )
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.artifact-directory }}/
+          if-no-files-found: error
+          retention-days: 14

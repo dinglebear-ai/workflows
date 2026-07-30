@@ -78,7 +78,7 @@ def validate() -> list[str]:
             errors.append(f"{path.name}: missing top-level permissions")
 
         triggers = data.get("on")
-        if path.name != "validate-library.yml":
+        if kind != "internal":
             if not isinstance(triggers, dict) or "workflow_call" not in triggers:
                 errors.append(f"{path.name}: reusable workflow lacks workflow_call")
 
@@ -142,4 +142,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

@@ -1,0 +1,36 @@
+name: Unraid plugin release
+
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+concurrency:
+  group: unraid-plugin-release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    permissions:
+      contents: read
+    uses: dinglebear-ai/workflows/.github/workflows/unraid-plugin-ci.yml@__WORKFLOWS_SHA__
+    with:
+      checkout-ref: ${{ github.event.release.tag_name }}
+      build-command: scripts/ci/build-unraid-plugin.sh
+      validate-command: scripts/ci/validate-unraid-plugin.sh
+      artifact-name: unraid-plugin-${{ github.event.release.tag_name }}
+      artifact-directory: dist/unraid
+    secrets: inherit
+
+  publish:
+    needs: package
+    permissions:
+      contents: write
+    uses: dinglebear-ai/workflows/.github/workflows/unraid-plugin-release.yml@__WORKFLOWS_SHA__
+    with:
+      release-tag: ${{ github.event.release.tag_name }}
+      artifact-name: unraid-plugin-${{ github.event.release.tag_name }}
+      artifact-directory: release-artifacts
+      validate-command: find release-artifacts -type f -name '*.plg' -print -quit | grep -q . && find release-artifacts -type f -name '*.txz' -print -quit | grep -q .
+    secrets: inherit

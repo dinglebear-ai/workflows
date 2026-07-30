@@ -1,0 +1,21 @@
+name: Publish CI images
+
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+concurrency:
+  group: publish-ci-images-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/hosted-ci-images-release.yml
+    with:
+      checkout-ref: ${{ github.event.release.tag_name }}
+      release-tag: ${{ github.event.release.tag_name }}

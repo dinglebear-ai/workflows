@@ -1,0 +1,43 @@
+name: Repository policy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  workflow-policy:
+    permissions:
+      contents: read
+    uses: dinglebear-ai/workflows/.github/workflows/fleet-policy.yml@__WORKFLOWS_SHA__
+    secrets: inherit
+
+  repository-policy:
+    permissions:
+      contents: read
+    uses: dinglebear-ai/workflows/.github/workflows/repository-policy.yml@__WORKFLOWS_SHA__
+    secrets: inherit
+
+  policy:
+    name: Policy
+    if: always()
+    needs: [workflow-policy, repository-policy]
+    runs-on: [self-hosted, ci-pool-ops]
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Require policy checks
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          results = json.loads(os.environ["RESULTS"])
+          failed = {name: job["result"] for name, job in results.items() if job["result"] != "success"}
+          if failed:
+              print(f"policy checks did not succeed: {failed}", file=sys.stderr)
+              raise SystemExit(1)
+          PY

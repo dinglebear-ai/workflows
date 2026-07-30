@@ -1,0 +1,72 @@
+name: Reusable hosted native Python wheels
+
+on:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        type: string
+        required: true
+      working-directory:
+        type: string
+        default: "."
+      package-dir:
+        type: string
+        default: "."
+      cibw-build:
+        type: string
+        default: "cp3*-*"
+      before-build:
+        type: string
+        default: ""
+      test-command:
+        type: string
+        default: ""
+      artifact-name:
+        type: string
+        default: native-wheels
+      timeout-minutes:
+        type: number
+        default: 60
+
+permissions:
+  contents: read
+
+jobs:
+  wheels:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: linux
+          - runner: macos-15-intel
+            platform: macos
+          - runner: windows-2025
+            platform: windows
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          persist-credentials: false
+      - name: Build x86_64 wheels
+        uses: pypa/cibuildwheel@09434409513b653da26dde4078a350af3345b3a7 # v3.2.1
+        env:
+          CIBW_ARCHS: x86_64
+          CIBW_BEFORE_BUILD: ${{ inputs.before-build }}
+          CIBW_BUILD: ${{ inputs.cibw-build }}
+          CIBW_TEST_COMMAND: ${{ inputs.test-command }}
+        with:
+          package-dir: ${{ inputs.package-dir }}
+          output-dir: wheelhouse
+      - name: Upload wheels
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ inputs.artifact-name }}-${{ matrix.platform }}
+          path: ${{ inputs.working-directory }}/wheelhouse/*.whl
+          if-no-files-found: error
+          retention-days: 14

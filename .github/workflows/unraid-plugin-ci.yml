@@ -1,14 +1,11 @@
-name: Reusable Unraid plugin CI
+name: Reusable hosted Unraid plugin package
 
 on:
   workflow_call:
     inputs:
-      runner-labels-json:
-        type: string
-        default: '["ubuntu-24.04"]'
       checkout-ref:
         type: string
-        default: ""
+        required: true
       build-command:
         type: string
         required: true
@@ -18,9 +15,9 @@ on:
       artifact-name:
         type: string
         required: true
-      artifact-path:
+      artifact-directory:
         type: string
-        required: true
+        default: dist/unraid
       timeout-minutes:
         type: number
         default: 15
@@ -30,7 +27,7 @@ permissions:
 
 jobs:
   plugin:
-    runs-on: ${{ fromJSON(inputs.runner-labels-json) }}
+    runs-on: ubuntu-24.04
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -45,10 +42,24 @@ jobs:
         env:
           COMMAND: ${{ inputs.validate-command }}
         run: bash -euo pipefail -c "$COMMAND"
+      - name: Generate exact checksum inventory
+        env:
+          ARTIFACT_DIRECTORY: ${{ inputs.artifact-directory }}
+        run: |
+          set -euo pipefail
+          find "$ARTIFACT_DIRECTORY" -type f -print -quit | grep -q .
+          (
+            cd "$ARTIFACT_DIRECTORY"
+            checksum_inventory="$(mktemp)"
+            find . -type f ! -name SHA256SUMS -print0 |
+              sort -z |
+              xargs -0 sha256sum > "$checksum_inventory"
+            mv "$checksum_inventory" SHA256SUMS
+            sha256sum --check --strict SHA256SUMS
+          )
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ inputs.artifact-name }}
-          path: ${{ inputs.artifact-path }}
+          path: ${{ inputs.artifact-directory }}/
           if-no-files-found: error
           retention-days: 7
-
