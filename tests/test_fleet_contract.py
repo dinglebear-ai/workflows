@@ -156,8 +156,14 @@ class FleetContractTests(unittest.TestCase):
     def test_imported_and_generated_docs_do_not_require_fleet_frontmatter(self) -> None:
         repo = self.make_rust_repo()
         for directory in (
+            "archive",
             "generated",
+            "perf",
+            "pipeline-unification",
+            "plans",
+            "reference",
             "references",
+            "reports",
             "sessions",
             "superpowers",
             "upstream",

@@ -537,9 +537,15 @@ def check_docs(repo: pathlib.Path) -> list[Finding]:
             or any(
                 part
                 in {
+                    "archive",
                     "fixtures",
                     "generated",
+                    "perf",
+                    "pipeline-unification",
+                    "plans",
+                    "reference",
                     "references",
+                    "reports",
                     "sessions",
                     "superpowers",
                     "upstream",
