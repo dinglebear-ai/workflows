@@ -153,6 +153,25 @@ class FleetContractTests(unittest.TestCase):
         self.assertIn("docs-frontmatter: docs/guide.md", result.stdout)
         self.assertNotIn("docs/untracked.md", result.stdout)
 
+    def test_imported_and_generated_docs_do_not_require_fleet_frontmatter(self) -> None:
+        repo = self.make_rust_repo()
+        for directory in (
+            "generated",
+            "references",
+            "sessions",
+            "superpowers",
+            "upstream",
+            "vendor",
+        ):
+            path = repo / "docs" / directory / "reference.md"
+            path.parent.mkdir(parents=True)
+            path.write_text("# External reference\n")
+        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+
+        result = self.run_check(repo)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_dependency_ranges_do_not_count_as_exact_pins(self) -> None:
         repo = self.make_rust_repo()
         with (repo / "Cargo.toml").open("a") as manifest:
