@@ -8,7 +8,7 @@ on:
         default: "**/*.sh"
       actionlint-version:
         type: string
-        default: "v1.7.7"
+        default: "v1.7.12"
       policy-command:
         type: string
         default: ""
@@ -45,6 +45,7 @@ jobs:
           SHELL_GLOBS: ${{ inputs.shell-globs }}
         run: |
           set -euo pipefail
+          # shellcheck disable=SC2153  # Supplied through the step environment.
           read -r -a shell_globs <<< "$SHELL_GLOBS"
           mapfile -d '' files < <(git ls-files -z -- "${shell_globs[@]}")
           ((${#files[@]} == 0)) && exit 0
