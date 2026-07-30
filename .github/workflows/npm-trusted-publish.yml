@@ -18,6 +18,9 @@ on:
       cache-dependency-path:
         type: string
         default: package-lock.json
+      enable-cache:
+        type: boolean
+        default: true
       install-command:
         type: string
         default: npm ci --no-audit --no-fund
@@ -53,7 +56,7 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
           registry-url: https://registry.npmjs.org
-          cache: npm
+          cache: ${{ inputs.enable-cache && 'npm' || '' }}
           cache-dependency-path: ${{ inputs.cache-dependency-path }}
       - name: Require exact package version
         env:
