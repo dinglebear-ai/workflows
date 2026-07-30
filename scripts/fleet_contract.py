@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import pathlib
 import re
@@ -64,11 +65,7 @@ def git(repo: pathlib.Path, *args: str) -> str:
 
 def tracked_files(repo: pathlib.Path) -> list[pathlib.Path]:
     output = git(repo, "ls-files", "-z")
-    return [
-        repo / path
-        for path in output.rstrip("\0").split("\0")
-        if path
-    ]
+    return [repo / path for path in output.rstrip("\0").split("\0") if path]
 
 
 def relative(repo: pathlib.Path, path: pathlib.Path) -> str:
@@ -179,11 +176,30 @@ def check_workspace_lints(repo: pathlib.Path) -> list[Finding]:
                 )
 
     for manifest in cargo_manifests(repo):
-        package = load_toml(manifest).get("package")
+        manifest_data = load_toml(manifest)
+        package = manifest_data.get("package")
         if not isinstance(package, dict):
             continue
-        lints = load_toml(manifest).get("lints", {})
+        lints = manifest_data.get("lints", {})
         if lints.get("workspace") is not True:
+            # A narrowly scoped FFI crate cannot inherit a workspace-level
+            # `unsafe_code = "forbid"` and then relax it. Permit only the
+            # explicit local override needed for that boundary; every other
+            # non-inheriting package remains a contract violation.
+            local_rust = lints.get("rust", {})
+            workspace_rust = workspace_lints.get("rust", {})
+            fleet_metadata = package.get("metadata", {}).get("fleet", {})
+            sanctioned_ffi_boundary = (
+                isinstance(fleet_metadata, dict)
+                and fleet_metadata.get("workspace-lints-exception") == "unsafe-ffi"
+                and lint_level(workspace_rust.get("unsafe_code")) == "forbid"
+                and isinstance(local_rust, dict)
+                and lint_level(local_rust.get("unsafe_code")) == "allow"
+                and set(local_rust) == {"unsafe_code"}
+                and set(lints) == {"rust"}
+            )
+            if sanctioned_ffi_boundary:
+                continue
             findings.append(
                 Finding(
                     "workspace-lints",
@@ -327,11 +343,7 @@ def check_scoped_text(repo: pathlib.Path) -> list[Finding]:
             or path.suffix in {".plg"}
             or rel.startswith("scripts/install")
         )
-        if (
-            not (stale_scope or arm_scope)
-            or not path.is_file()
-            or path.is_symlink()
-        ):
+        if not (stale_scope or arm_scope) or not path.is_file() or path.is_symlink():
             continue
         try:
             text = path.read_text()
@@ -364,8 +376,7 @@ def readme_lead(text: str) -> str | None:
         lines = [
             line.strip()
             for line in paragraph.splitlines()
-            if line.strip()
-            and not line.lstrip().startswith(("#", "<!--", "[![", "!["))
+            if line.strip() and not line.lstrip().startswith(("#", "<!--", "[![", "!["))
         ]
         if lines:
             return " ".join(lines)
@@ -433,9 +444,7 @@ def check_tracked_paths(repo: pathlib.Path) -> list[Finding]:
         check=False,
     )
     ignored_paths = {
-        path
-        for path in ignored_result.stdout.rstrip("\0").split("\0")
-        if path
+        path for path in ignored_result.stdout.rstrip("\0").split("\0") if path
     }
 
     for path, rel in zip(tracked, relative_paths, strict=True):
@@ -487,7 +496,8 @@ def check_env_schema(repo: pathlib.Path) -> list[Finding]:
             or not path.is_file()
             or path.is_symlink()
             or any(
-                part in {"docs", "fixtures", "generated", "node_modules", "target", "vendor"}
+                part
+                in {"docs", "fixtures", "generated", "node_modules", "target", "vendor"}
                 for part in pathlib.PurePosixPath(rel).parts
             )
             or path.stat().st_size > 1_000_000
@@ -518,15 +528,17 @@ def frontmatter_keys(text: str) -> set[str]:
         block = text.split("---\n", 2)[1]
     except IndexError:
         return set()
-    return {
-        line.split(":", 1)[0].strip()
-        for line in block.splitlines()
-        if ":" in line
-    }
+    return {line.split(":", 1)[0].strip() for line in block.splitlines() if ":" in line}
 
 
 def check_docs(repo: pathlib.Path) -> list[Finding]:
     findings: list[Finding] = []
+    config = load_toml(repo / ".fleet-contract.toml")
+    configured_excludes = config.get("docs", {}).get("frontmatter-exclude", [])
+    if not isinstance(configured_excludes, list) or not all(
+        isinstance(pattern, str) for pattern in configured_excludes
+    ):
+        configured_excludes = []
     for path in tracked_files(repo):
         rel = relative(repo, path)
         parts = pathlib.PurePosixPath(rel).parts
@@ -554,6 +566,7 @@ def check_docs(repo: pathlib.Path) -> list[Finding]:
                 }
                 for part in parts
             )
+            or any(fnmatch.fnmatchcase(rel, pattern) for pattern in configured_excludes)
         ):
             continue
         missing = FRONTMATTER_KEYS - frontmatter_keys(path.read_text())

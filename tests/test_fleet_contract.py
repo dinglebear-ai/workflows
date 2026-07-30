@@ -75,9 +75,7 @@ class FleetContractTests(unittest.TestCase):
         (repo / "AGENTS.md").symlink_to("CLAUDE.md")
         (repo / "GEMINI.md").symlink_to("CLAUDE.md")
         (repo / ".env.example").write_text("")
-        (repo / "README.md").write_text(
-            "# Fixture\n\nFixture repository.\n"
-        )
+        (repo / "README.md").write_text("# Fixture\n\nFixture repository.\n")
         (repo / "docs/guide.md").write_text(
             "---\n"
             "title: Guide\n"
@@ -126,7 +124,9 @@ class FleetContractTests(unittest.TestCase):
                 "https://github.com/jmagar/fixture",
             )
         )
-        (repo / "install.sh").write_text("#!/bin/sh\ncase arm64 in arm64) exit 0;; esac\n")
+        (repo / "install.sh").write_text(
+            "#!/bin/sh\ncase arm64 in arm64) exit 0;; esac\n"
+        )
         subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
 
         result = self.run_check(repo)
@@ -178,6 +178,36 @@ class FleetContractTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_repository_can_exclude_frozen_docs_with_explicit_globs(self) -> None:
+        repo = self.make_rust_repo()
+        frozen = repo / "docs/snippets/smoke-output.md"
+        frozen.parent.mkdir(parents=True)
+        frozen.write_text("# Captured output\n")
+        (repo / ".fleet-contract.toml").write_text(
+            '[docs]\nfrontmatter-exclude = ["docs/snippets/*-output.md"]\n'
+        )
+        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+
+        result = self.run_check(repo)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_repository_doc_exclusions_do_not_hide_other_maintained_docs(self) -> None:
+        repo = self.make_rust_repo()
+        snippets = repo / "docs/snippets"
+        snippets.mkdir()
+        (snippets / "smoke-output.md").write_text("# Captured output\n")
+        (snippets / "maintained.md").write_text("# Missing metadata\n")
+        (repo / ".fleet-contract.toml").write_text(
+            '[docs]\nfrontmatter-exclude = ["docs/snippets/*-output.md"]\n'
+        )
+        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+
+        result = self.run_check(repo)
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("docs-frontmatter: docs/snippets/maintained.md", result.stdout)
+
     def test_memory_and_readme_docs_do_not_require_frontmatter(self) -> None:
         repo = self.make_rust_repo()
         (repo / "docs/CLAUDE.md").write_text("# Repository memory\n")
@@ -224,6 +254,64 @@ class FleetContractTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 1)
         self.assertIn("deps-exact-pinned: Cargo.toml", result.stdout)
+
+    def test_explicit_unsafe_ffi_boundary_may_opt_out_of_workspace_lints(self) -> None:
+        repo = self.make_rust_repo()
+        cargo = (
+            (repo / "Cargo.toml")
+            .read_text()
+            .replace(
+                "[workspace.lints.rust]\n",
+                '[workspace.lints.rust]\nunsafe_code = "forbid"\n',
+            )
+        )
+        (repo / "Cargo.toml").write_text(cargo)
+        ffi = repo / "crates/ffi"
+        (ffi / "src").mkdir(parents=True)
+        (ffi / "src/lib.rs").write_text("//! Sanctioned FFI boundary.\n")
+        (ffi / "Cargo.toml").write_text(
+            textwrap.dedent(
+                """\
+                [package]
+                name = "fixture-ffi"
+                version = "0.1.0"
+                edition = "2024"
+                description = "Sanctioned FFI boundary."
+                license = "MIT"
+                repository = "https://github.com/dinglebear-ai/fixture"
+                homepage = "https://github.com/dinglebear-ai/fixture"
+
+                [package.metadata.fleet]
+                workspace-lints-exception = "unsafe-ffi"
+
+                [lints.rust]
+                unsafe_code = "allow"
+                """
+            )
+        )
+        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+
+        result = self.run_check(repo)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_non_ffi_package_cannot_opt_out_of_workspace_lints(self) -> None:
+        repo = self.make_rust_repo()
+        cargo = (
+            (repo / "Cargo.toml")
+            .read_text()
+            .replace(
+                "[lints]\nworkspace = true",
+                '[lints.rust]\nunsafe_code = "allow"',
+            )
+        )
+        (repo / "Cargo.toml").write_text(cargo)
+        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+
+        result = self.run_check(repo)
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("workspace-lints: Cargo.toml", result.stdout)
 
     def test_description_must_match_present_repository_surfaces(self) -> None:
         repo = self.make_rust_repo()
