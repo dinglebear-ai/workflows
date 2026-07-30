@@ -172,6 +172,31 @@ class FleetContractTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_memory_and_readme_docs_do_not_require_frontmatter(self) -> None:
+        repo = self.make_rust_repo()
+        (repo / "docs/CLAUDE.md").write_text("# Repository memory\n")
+        (repo / "docs/AGENTS.md").symlink_to("CLAUDE.md")
+        (repo / "docs/GEMINI.md").symlink_to("CLAUDE.md")
+        (repo / "docs/README.md").write_text("# Documentation index\n")
+        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+
+        result = self.run_check(repo)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_compose_prose_is_not_treated_as_a_compose_manifest(self) -> None:
+        repo = self.make_rust_repo()
+        notes = repo / "notes"
+        notes.mkdir()
+        (notes / "android-compose-migration.md").write_text(
+            "Historical link: https://github.com/jmagar/fixture\n"
+        )
+        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+
+        result = self.run_check(repo)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_dependency_ranges_do_not_count_as_exact_pins(self) -> None:
         repo = self.make_rust_repo()
         with (repo / "Cargo.toml").open("a") as manifest:
