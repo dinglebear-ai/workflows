@@ -106,11 +106,21 @@ def check_toolchain(repo: pathlib.Path) -> list[Finding]:
 
 
 def cargo_manifests(repo: pathlib.Path) -> list[pathlib.Path]:
+    config = load_toml(repo / ".fleet-contract.toml")
+    configured_excludes = config.get("cargo", {}).get("manifest-exclude", [])
+    if not isinstance(configured_excludes, list) or not all(
+        isinstance(pattern, str) for pattern in configured_excludes
+    ):
+        configured_excludes = []
     return [
         path
         for path in tracked_files(repo)
         if path.name == "Cargo.toml"
         and not any(part in {"target", "vendor"} for part in path.parts)
+        and not any(
+            fnmatch.fnmatchcase(relative(repo, path), pattern)
+            for pattern in configured_excludes
+        )
     ]
 
 

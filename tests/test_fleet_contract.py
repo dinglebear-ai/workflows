@@ -313,6 +313,57 @@ class FleetContractTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("workspace-lints: Cargo.toml", result.stdout)
 
+    def test_repository_can_exclude_a_frozen_cargo_fixture_explicitly(self) -> None:
+        repo = self.make_rust_repo()
+        fixture = repo / "ci/frozen-probe"
+        (fixture / "src").mkdir(parents=True)
+        (fixture / "src/lib.rs").write_text("//! Frozen external fixture.\n")
+        (fixture / "Cargo.toml").write_text(
+            textwrap.dedent(
+                """\
+                [package]
+                name = "frozen-probe"
+                version = "0.1.0"
+                edition = "2021"
+                """
+            )
+        )
+        (repo / ".fleet-contract.toml").write_text(
+            '[cargo]\nmanifest-exclude = ["ci/frozen-probe/Cargo.toml"]\n'
+        )
+        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+
+        result = self.run_check(repo)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_cargo_exclusion_does_not_hide_other_manifests(self) -> None:
+        repo = self.make_rust_repo()
+        for name in ("frozen-probe", "maintained"):
+            fixture = repo / f"ci/{name}"
+            (fixture / "src").mkdir(parents=True)
+            (fixture / "src/lib.rs").write_text("//! Fixture.\n")
+            (fixture / "Cargo.toml").write_text(
+                textwrap.dedent(
+                    f"""\
+                    [package]
+                    name = "{name}"
+                    version = "0.1.0"
+                    edition = "2021"
+                    """
+                )
+            )
+        (repo / ".fleet-contract.toml").write_text(
+            '[cargo]\nmanifest-exclude = ["ci/frozen-probe/Cargo.toml"]\n'
+        )
+        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+
+        result = self.run_check(repo)
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("edition-2024: ci/maintained/Cargo.toml", result.stdout)
+        self.assertNotIn("ci/frozen-probe/Cargo.toml", result.stdout)
+
     def test_description_must_match_present_repository_surfaces(self) -> None:
         repo = self.make_rust_repo()
         (repo / "README.md").write_text(
