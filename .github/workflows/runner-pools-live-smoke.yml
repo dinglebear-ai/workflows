@@ -1,0 +1,58 @@
+name: Runner pools live smoke
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/runner-pools-live-smoke.yml
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    runs-on: [self-hosted, ci-pool-rust]
+    timeout-minutes: 5
+    steps:
+      - name: Verify Rust pool routing
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "runner=$RUNNER_NAME"
+          case "$RUNNER_NAME" in
+            tootie-ci-runner-rust-*) ;;
+            *) echo "unexpected Rust runner: $RUNNER_NAME" >&2; exit 1 ;;
+          esac
+
+  typescript:
+    runs-on: [self-hosted, ci-pool-typescript]
+    timeout-minutes: 5
+    steps:
+      - name: Verify TypeScript pool routing
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "runner=$RUNNER_NAME"
+          case "$RUNNER_NAME" in
+            tootie-ci-runner-typescript-*) ;;
+            *) echo "unexpected TypeScript runner: $RUNNER_NAME" >&2; exit 1 ;;
+          esac
+
+  python:
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        shard: [1, 2]
+    runs-on: [self-hosted, ci-pool-python]
+    timeout-minutes: 5
+    steps:
+      - name: Verify Python pool routing and hold both runners busy
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "runner=$RUNNER_NAME shard=${{ matrix.shard }}"
+          case "$RUNNER_NAME" in
+            tootie-ci-runner-python-*) ;;
+            *) echo "unexpected Python runner: $RUNNER_NAME" >&2; exit 1 ;;
+          esac
+          sleep 90
