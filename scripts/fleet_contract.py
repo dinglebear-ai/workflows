@@ -313,9 +313,13 @@ def check_scoped_text(repo: pathlib.Path) -> list[Finding]:
     findings: list[Finding] = []
     for path in tracked_files(repo):
         rel = relative(repo, path)
+        compose_manifest = path.suffix in {".yaml", ".yml"} and (
+            path.name in {"compose.yaml", "compose.yml"}
+            or path.name.startswith("docker-compose")
+        )
         stale_scope = (
             path.name in {"Cargo.toml", "package.json", "server.json", "plugin.json"}
-            or "compose" in path.name
+            or compose_manifest
             or path.suffix in {".plg"}
         )
         arm_scope = (
@@ -529,6 +533,7 @@ def check_docs(repo: pathlib.Path) -> list[Finding]:
         if (
             not rel.startswith("docs/")
             or path.suffix != ".md"
+            or path.name in {"AGENTS.md", "CLAUDE.md", "GEMINI.md", "README.md"}
             or any(
                 part
                 in {
