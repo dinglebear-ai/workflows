@@ -6,6 +6,10 @@ on:
       node-version:
         type: string
         default: "22"
+      python-version:
+        description: Optional Python version for Node projects with Python-backed tooling.
+        type: string
+        default: ""
       working-directory:
         type: string
         default: "."
@@ -60,6 +64,10 @@ jobs:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.enable-cache && 'npm' || '' }}
           cache-dependency-path: ${{ inputs.cache-dependency-path }}
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        if: inputs.python-version != ''
+        with:
+          python-version: ${{ inputs.python-version }}
       - name: Locked install
         env:
           COMMAND: ${{ inputs.install-command }}

@@ -27,6 +27,7 @@ jobs:
     uses: dinglebear-ai/workflows/.github/workflows/fleet-contract.yml@__WORKFLOWS_SHA__
     with:
       profile: __PROFILE__
+      implementation-ref: __WORKFLOWS_SHA__
     secrets: inherit
 
   policy:

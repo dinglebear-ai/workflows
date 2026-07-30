@@ -37,6 +37,11 @@ The bootstrap-generated `policy.yml` calls the contract at the same immutable
 workflow-library SHA as the other policy jobs. Its stable `Policy` aggregate
 must be required by branch protection.
 
+Cross-repository callers must pass that same full SHA as
+`implementation-ref`. GitHub associates the called workflow's `github`
+context with the caller, so `github.workflow_sha` cannot identify the reusable
+workflow implementation.
+
 Run the implementation locally before opening a pull request:
 
 ```bash
