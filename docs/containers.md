@@ -28,7 +28,7 @@ Pin the published image by digest for protected CI:
 ```yaml
 jobs:
   test:
-    runs-on: [self-hosted, ci-pool-python]
+    runs-on: ci-pool-python
     container:
       image: ghcr.io/dinglebear-ai/workflows-ci-python@sha256:<digest>
     steps:

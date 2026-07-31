@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   policy:
-    runs-on: [self-hosted, ci-pool-ops]
+    runs-on: ci-pool-ops
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -74,11 +74,14 @@ jobs:
                   runner = str(job.get("runs-on", ""))
                   hosted_linux = "ubuntu-" in runner
                   self_hosted = "self-hosted" in runner
-                  if is_release and self_hosted:
-                      errors.append(f"{path}:{name}: heavy release job is self-hosted")
+                  farm_routed = "ci-pool-" in runner
+                  if is_release and (self_hosted or farm_routed):
+                      errors.append(f"{path}:{name}: heavy release job is farm-routed")
                   if not is_release and hosted_linux and not allow_hosted_fast:
                       errors.append(f"{path}:{name}: fast Linux job is GitHub-hosted")
-                  if self_hosted and "ci-pool-" not in runner:
+                  if self_hosted and farm_routed:
+                      errors.append(f"{path}:{name}: scale-set selector must not include self-hosted")
+                  elif self_hosted:
                       errors.append(f"{path}:{name}: farm job has no pool selector")
 
           if errors:

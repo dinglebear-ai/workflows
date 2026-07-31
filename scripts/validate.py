@@ -95,10 +95,14 @@ def validate() -> list[str]:
             runner = json.dumps(job.get("runs-on", "")).lower()
             if kind == "fast" and "ubuntu-" in runner:
                 errors.append(f"{path.name}:{job_name}: fast workflow is hosted")
+            if "self-hosted" in runner and "ci-pool-" in runner:
+                errors.append(
+                    f"{path.name}:{job_name}: scale-set selector must not include self-hosted"
+                )
             if kind == "release" and (
                 "self-hosted" in runner or "ci-pool-" in runner
             ):
-                errors.append(f"{path.name}:{job_name}: release workflow is self-hosted")
+                errors.append(f"{path.name}:{job_name}: release workflow is farm-routed")
 
         for step in iter_steps(data):
             if not isinstance(step, dict):

@@ -8,7 +8,7 @@ on:
         required: true
       runner-labels-json:
         type: string
-        default: '["self-hosted","ci-pool-ops"]'
+        default: '"ci-pool-ops"'
       build-mode:
         type: string
         default: none

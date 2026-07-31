@@ -36,7 +36,7 @@ permissions:
 
 jobs:
   validate:
-    runs-on: [self-hosted, ci-pool-python]
+    runs-on: ci-pool-python
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -61,7 +61,7 @@ jobs:
         run: bash -euo pipefail -c "$COMMAND"
 
   install-smoke:
-    runs-on: [self-hosted, ci-pool-typescript]
+    runs-on: ci-pool-typescript
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5

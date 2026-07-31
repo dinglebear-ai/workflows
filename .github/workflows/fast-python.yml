@@ -36,7 +36,7 @@ permissions:
 
 jobs:
   python:
-    runs-on: [self-hosted, ci-pool-python]
+    runs-on: ci-pool-python
     timeout-minutes: ${{ inputs.timeout-minutes }}
     defaults:
       run:

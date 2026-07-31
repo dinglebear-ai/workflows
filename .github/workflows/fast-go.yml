@@ -30,7 +30,7 @@ permissions:
 
 jobs:
   vulnerability:
-    runs-on: [self-hosted, ci-pool-go]
+    runs-on: ci-pool-go
     timeout-minutes: ${{ inputs.timeout-minutes }}
     defaults:
       run:
@@ -54,7 +54,7 @@ jobs:
       - run: govulncheck ./...
 
   test:
-    runs-on: [self-hosted, ci-pool-go]
+    runs-on: ci-pool-go
     timeout-minutes: ${{ inputs.timeout-minutes }}
     defaults:
       run:

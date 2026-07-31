@@ -49,7 +49,7 @@ permissions:
 
 jobs:
   node:
-    runs-on: [self-hosted, ci-pool-typescript]
+    runs-on: ci-pool-typescript
     timeout-minutes: ${{ inputs.timeout-minutes }}
     defaults:
       run:
