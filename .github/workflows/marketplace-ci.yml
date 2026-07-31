@@ -13,6 +13,10 @@ on:
       validation-command:
         type: string
         required: true
+      validation-setup-command:
+        description: Optional tool installation before marketplace validation.
+        type: string
+        default: ""
       enable-node-cache:
         description: Enable npm caching when the caller has a package lockfile.
         type: boolean
@@ -42,6 +46,15 @@ jobs:
         with:
           python-version: ${{ inputs.python-version }}
           cache: ${{ inputs.enable-python-cache && 'pip' || '' }}
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        if: inputs.validation-setup-command != ''
+        with:
+          node-version: "22"
+      - name: Install validation tools
+        if: inputs.validation-setup-command != ''
+        env:
+          COMMAND: ${{ inputs.validation-setup-command }}
+        run: bash -euo pipefail -c "$COMMAND"
       - name: Validate manifests, schemas, generators, and tests
         env:
           COMMAND: ${{ inputs.validation-command }}

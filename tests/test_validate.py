@@ -107,6 +107,7 @@ class WorkflowLibraryTests(unittest.TestCase):
         inputs = workflow["on"]["workflow_call"]["inputs"]
         self.assertEqual(inputs["enable-python-cache"]["default"], "true")
         self.assertEqual(inputs["enable-node-cache"]["default"], "true")
+        self.assertEqual(inputs["validation-setup-command"]["default"], "")
         text = (ROOT / ".github/workflows/marketplace-ci.yml").read_text()
         self.assertIn(
             "cache: ${{ inputs.enable-python-cache && 'pip' || '' }}",
@@ -115,6 +116,10 @@ class WorkflowLibraryTests(unittest.TestCase):
         self.assertIn(
             "cache: ${{ inputs.enable-node-cache && 'npm' || '' }}",
             text,
+        )
+        self.assertLess(
+            text.index("- name: Install validation tools"),
+            text.index("- name: Validate manifests, schemas, generators, and tests"),
         )
 
     def test_kache_action_uses_shard_capable_pin(self) -> None:
@@ -140,7 +145,13 @@ class WorkflowLibraryTests(unittest.TestCase):
         )
         setup = workflow["on"]["workflow_call"]["inputs"]["setup-command"]
         self.assertEqual(setup["default"], "")
+        uv_version = workflow["on"]["workflow_call"]["inputs"]["uv-version"]
+        self.assertEqual(uv_version["default"], "")
         text = (ROOT / ".github/workflows/fast-rust.yml").read_text()
+        self.assertIn(
+            "astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b",
+            text,
+        )
         self.assertLess(
             text.index("- name: Project setup"),
             text.index("- name: Format"),
