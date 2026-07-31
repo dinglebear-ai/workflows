@@ -6,7 +6,7 @@ updated: 2026-07-30
 
 # Workflow catalog
 
-The catalog contains 44 reusable workflows plus three repository-internal
+The catalog contains 45 reusable workflows plus three repository-internal
 control-plane workflows. [`catalog.json`](../catalog.json) is authoritative.
 
 ## Calling a reusable workflow
@@ -31,6 +31,16 @@ Rules:
 - own events, path classification, and the aggregate required gate locally;
 - retain product-specific artifact and publication ordering locally.
 
+`marketplace-ci.yml` keeps both caches enabled by default for compatibility.
+Manifest-only marketplaces without a Python dependency manifest, npm lockfile,
+or both must pass `enable-python-cache: false`, `enable-node-cache: false`, or
+both. The validation and installation commands still run; only setup-action
+caching is skipped.
+
+Mixed-language Rust repositories can use `fast-rust.yml`'s `setup-command` for
+locked dependency preparation such as `uv sync --frozen`. It runs after the
+toolchain and Kache setup but before every Rust validation command.
+
 ## Inventory
 
 | Workflow | Kind | Category | Purpose |
@@ -45,7 +55,7 @@ Rules:
 | `fast-ops.yml` | fast | Operations | Actionlint, ShellCheck, Bash parsing, policy command |
 | `fast-pnpm.yml` | fast | TypeScript | Locked pnpm audit, lint, typecheck, tests, contracts |
 | `fast-python.yml` | fast | Python | Frozen uv sync, Ruff lint/format, ty typecheck, Pytest |
-| `fast-rust.yml` | fast | Rust | fmt, check, Clippy, targeted tests, MinIO kache |
+| `fast-rust.yml` | fast | Rust | Optional project setup, fmt, check, Clippy, targeted tests, MinIO kache |
 | `fleet-policy.yml` | fast | Policy | Runner, action, permission, timeout, architecture, release policy |
 | `github-release.yml` | release | Release | Attest and attach exact artifacts to an existing release |
 | `hosted-android-release.yml` | release | Android | Hosted release lint, tests, assembly, device evidence |
@@ -53,7 +63,7 @@ Rules:
 | `hosted-ci-images-release.yml` | release | Container | Build, scan, and publish the three canonical CI images |
 | `hosted-container-release.yml` | release | Container | Build, smoke, scan, and promote one amd64 digest |
 | `hosted-go-release.yml` | release | Go | Build x86_64 Go archives and checksums |
-| `hosted-incus-image.yml` | release | Incus | Hosted x86_64 image build, smoke, SBOM, and checksums |
+| `hosted-incus-image.yml` | release | Incus | Hosted x86_64 image build, optional MinIO kache for Rust assembly, smoke, SBOM, and checksums |
 | `hosted-python-package-release.yml` | release | Python | Build, verify, and trusted-publish wheel/sdist |
 | `hosted-python-wheels.yml` | release | Python | Native x86_64 wheels on hosted Linux/macOS/Windows |
 | `hosted-release-command.yml` | release | Release | Product command with exact hosted artifact retention |
@@ -61,7 +71,7 @@ Rules:
 | `hosted-rust-release.yml` | release | Rust | Hosted Linux Rust artifact with MinIO kache |
 | `hosted-web-release.yml` | release | TypeScript | npm/pnpm coverage, build, performance, browser E2E |
 | `install-contract.yml` | fast | Policy | Installer and release-asset agreement |
-| `marketplace-ci.yml` | fast | Marketplace | Structural validation and installation smoke |
+| `marketplace-ci.yml` | fast | Marketplace | Structural validation and installation smoke with independently optional pip/npm caches |
 | `mcp-conformance.yml` | release | MCP | Pinned official full MCP conformance evidence |
 | `mcp-registry-publish.yml` | release | MCP | Official MCP Registry publication and verification |
 | `npm-trusted-publish.yml` | release | TypeScript | Pack, verify, and OIDC-publish exact npm tarball, including dependency-free packages without lockfiles |

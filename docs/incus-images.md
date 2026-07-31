@@ -44,6 +44,13 @@ different distrobuilder acquisition paths. Whatever path is chosen must pin a
 version and verify a release checksum; an unpinned snap or moving package is
 not a release contract.
 
+If image assembly compiles Rust, callers may set `enable-kache: true`, pass a
+product-specific `kache-manifest-key`, and forward `KACHE_S3_ACCESS_KEY` plus
+`KACHE_S3_SECRET_KEY`. The reusable workflow enables kache only after the
+caller-owned setup command, so that command must install the required Rust
+toolchain. Non-Rust callers keep the default disabled behavior and need no
+Kache secrets.
+
 ## Output contract
 
 `dist/` may contain product-specific filenames, but it must contain only the
