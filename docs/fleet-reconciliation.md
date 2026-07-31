@@ -41,8 +41,17 @@ the reusable destination and the intentionally local boundary.
 | `synapse` | 7 | fast Rust/npm/web, CodeQL/MSRV/security, Dependabot, container/platform release | live workflow integration and template contract |
 | `unraid` | 19 | fast Python/Rust/Node/ops, native wheels, PyPI/crates/npm/MCP publication, container, Unraid plugin, drift, release liveness | monorepo component dispatch, `.plg` compatibility, Incus/Codex/MCP product assembly |
 | `yarr` | 10 | fast Rust/npm/ops, CodeQL/MSRV/security, Dependabot, container/platform release, Unraid plugin, Release Please | media-service integration, failure notification, component release order |
-| `young-office` | 1 | fast Node and repository policy | application governance command |
+| `jmagar/young-office` | 1 | fast Node and repository policy | application governance command; repository-scoped runner registration |
 | `zfs` | 1 | fast ops and system integration with `ci-cap-zfs` | privileged fixture setup and aggregate test summary |
+
+## Repository ownership and runner-scope exceptions
+
+`young-office` is intentionally owned by `jmagar`, not `dinglebear-ai`. Its
+self-hosted runners must be registered directly with
+`jmagar/young-office` and selected by repository workflow labels; they must not
+be registered with or exposed through the `dinglebear-ai` organization runner
+pool. The reusable workflows remain public cross-repository dependencies and do
+not imply organization ownership.
 
 ## Repeated families added after the initial extraction
 
