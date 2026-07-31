@@ -157,6 +157,10 @@ features, linker flags, Cargo config, and compatible system libraries must
 match. Release artifacts do not reuse debug/check-profile objects merely
 because they share a bucket.
 
+`fast-rust.yml` and `hosted-rust-release.yml` always use the shared remote.
+`hosted-incus-image.yml` can opt in when image assembly compiles Rust; its
+default remains cache-free for generic Incus builds.
+
 ## Publishing environments
 
 Create protected GitHub environments before enabling publication:

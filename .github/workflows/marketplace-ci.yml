@@ -6,9 +6,17 @@ on:
       python-version:
         type: string
         default: "3.12"
+      enable-python-cache:
+        description: Enable pip caching when the caller has a Python dependency manifest.
+        type: boolean
+        default: true
       validation-command:
         type: string
         required: true
+      enable-node-cache:
+        description: Enable npm caching when the caller has a package lockfile.
+        type: boolean
+        default: true
       cli-install-command:
         type: string
         required: true
@@ -33,7 +41,7 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ inputs.python-version }}
-          cache: pip
+          cache: ${{ inputs.enable-python-cache && 'pip' || '' }}
       - name: Validate manifests, schemas, generators, and tests
         env:
           COMMAND: ${{ inputs.validation-command }}
@@ -49,7 +57,7 @@ jobs:
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: "22"
-          cache: npm
+          cache: ${{ inputs.enable-node-cache && 'npm' || '' }}
       - name: Install exact CLI tool versions
         env:
           COMMAND: ${{ inputs.cli-install-command }}

@@ -99,6 +99,69 @@ class WorkflowLibraryTests(unittest.TestCase):
                 self.assertIn(tool, dockerfile)
                 self.assertIn(f"{tool} --version", smoke)
 
+    def test_marketplace_caches_are_independently_optional(self) -> None:
+        workflow = yaml.load(
+            (ROOT / ".github/workflows/marketplace-ci.yml").read_text(),
+            Loader=yaml.BaseLoader,
+        )
+        inputs = workflow["on"]["workflow_call"]["inputs"]
+        self.assertEqual(inputs["enable-python-cache"]["default"], "true")
+        self.assertEqual(inputs["enable-node-cache"]["default"], "true")
+        text = (ROOT / ".github/workflows/marketplace-ci.yml").read_text()
+        self.assertIn(
+            "cache: ${{ inputs.enable-python-cache && 'pip' || '' }}",
+            text,
+        )
+        self.assertIn(
+            "cache: ${{ inputs.enable-node-cache && 'npm' || '' }}",
+            text,
+        )
+
+    def test_kache_action_uses_shard_capable_pin(self) -> None:
+        pinned = (
+            "kunobi-ninja/kache-action"
+            "@a257c055543c2840700a9bbca8f9c3094a421b1b"
+        )
+        for workflow_name in (
+            "fast-rust.yml",
+            "hosted-incus-image.yml",
+            "hosted-rust-release.yml",
+        ):
+            text = (ROOT / ".github/workflows" / workflow_name).read_text()
+            with self.subTest(workflow=workflow_name):
+                self.assertIn(pinned, text)
+                self.assertIn("\n          namespace:", text)
+                self.assertIn('\n          pr-comment: "false"', text)
+
+    def test_fast_rust_supports_optional_project_setup(self) -> None:
+        workflow = yaml.load(
+            (ROOT / ".github/workflows/fast-rust.yml").read_text(),
+            Loader=yaml.BaseLoader,
+        )
+        setup = workflow["on"]["workflow_call"]["inputs"]["setup-command"]
+        self.assertEqual(setup["default"], "")
+        text = (ROOT / ".github/workflows/fast-rust.yml").read_text()
+        self.assertLess(
+            text.index("- name: Project setup"),
+            text.index("- name: Format"),
+        )
+
+    def test_hosted_incus_kache_is_opt_in(self) -> None:
+        workflow = yaml.load(
+            (ROOT / ".github/workflows/hosted-incus-image.yml").read_text(),
+            Loader=yaml.BaseLoader,
+        )
+        call = workflow["on"]["workflow_call"]
+        self.assertEqual(call["inputs"]["enable-kache"]["default"], "false")
+        self.assertEqual(
+            call["secrets"]["KACHE_S3_ACCESS_KEY"]["required"],
+            "false",
+        )
+        self.assertEqual(
+            call["secrets"]["KACHE_S3_SECRET_KEY"]["required"],
+            "false",
+        )
+
     def test_bootstrap_profiles_create_immutable_callers(self) -> None:
         bootstrap = ROOT / "scripts" / "bootstrap.sh"
         release_types = {
