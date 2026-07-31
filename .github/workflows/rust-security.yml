@@ -11,7 +11,7 @@ on:
         default: "."
       cargo-deny-version:
         type: string
-        default: "0.18.4"
+        default: "0.20.2"
       command:
         type: string
         default: cargo deny check
@@ -43,4 +43,3 @@ jobs:
       - env:
           COMMAND: ${{ inputs.command }}
         run: bash -euo pipefail -c "$COMMAND"
-
