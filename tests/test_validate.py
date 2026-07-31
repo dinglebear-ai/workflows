@@ -157,6 +157,19 @@ class WorkflowLibraryTests(unittest.TestCase):
             text.index("- name: Format"),
         )
 
+    def test_rust_security_uses_cvss4_capable_cargo_deny(self) -> None:
+        workflow_path = ROOT / ".github/workflows/rust-security.yml"
+        workflow = yaml.load(
+            workflow_path.read_text(),
+            Loader=yaml.BaseLoader,
+        )
+        version = workflow["on"]["workflow_call"]["inputs"]["cargo-deny-version"]
+        self.assertEqual(version["default"], "0.20.2")
+        self.assertIn(
+            "cargo-deny@${{ inputs.cargo-deny-version }}",
+            workflow_path.read_text(),
+        )
+
     def test_hosted_incus_kache_is_opt_in(self) -> None:
         workflow = yaml.load(
             (ROOT / ".github/workflows/hosted-incus-image.yml").read_text(),
