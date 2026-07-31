@@ -37,9 +37,15 @@ or both must pass `enable-python-cache: false`, `enable-node-cache: false`, or
 both. The validation and installation commands still run; only setup-action
 caching is skipped.
 
+If validation itself invokes a Node-based marketplace CLI,
+`validation-setup-command` installs that pinned tool after Node and Python are
+available but before the validation command runs.
+
 Mixed-language Rust repositories can use `fast-rust.yml`'s `setup-command` for
 locked dependency preparation such as `uv sync --frozen`. It runs after the
-toolchain and Kache setup but before every Rust validation command.
+toolchain and Kache setup but before every Rust validation command. Pass an
+exact `uv-version` when that setup command invokes uv; an empty value keeps
+pure-Rust callers free of Python tooling.
 
 ## Inventory
 

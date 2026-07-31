@@ -13,6 +13,10 @@ on:
         description: Optional dependency or fixture setup before Rust validation.
         type: string
         default: ""
+      uv-version:
+        description: Optional pinned uv version for mixed Rust and Python repositories.
+        type: string
+        default: ""
       fmt-command:
         type: string
         default: cargo fmt --all -- --check
@@ -70,6 +74,11 @@ jobs:
           warm: "true"
           sync: "false"
           pr-comment: "false"
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        if: inputs.uv-version != ''
+        with:
+          version: ${{ inputs.uv-version }}
+          enable-cache: true
       - name: Project setup
         if: inputs.setup-command != ''
         env:
