@@ -23,13 +23,13 @@ jobs:
     uses: dinglebear-ai/workflows/.github/workflows/codeql.yml@__WORKFLOWS_SHA__
     with:
       language: javascript-typescript
-      runner-labels-json: '["self-hosted","ci-pool-typescript"]'
+      runner-labels-json: '"ci-pool-typescript"'
     secrets: inherit
   ci:
     name: CI
     if: always()
     needs: [pnpm, codeql]
-    runs-on: [self-hosted, ci-pool-ops]
+    runs-on: ci-pool-ops
     timeout-minutes: 5
     permissions: {}
     steps:

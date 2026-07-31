@@ -30,11 +30,11 @@ Capabilities currently modeled:
 Examples:
 
 ```yaml
-runs-on: [self-hosted, ci-pool-rust]
+runs-on: ci-pool-rust
 ```
 
 ```yaml
-runs-on: [self-hosted, ci-pool-system, ci-cap-zfs]
+runs-on: ci-pool-system
 ```
 
 Heavy release jobs never use these pools. They run on GitHub-hosted x86_64

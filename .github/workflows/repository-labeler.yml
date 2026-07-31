@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   label:
-    runs-on: [self-hosted, ci-pool-ops]
+    runs-on: ci-pool-ops
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
       - uses: actions/labeler@b8dd2d9be0f68b860e7dae5dae7d772984eacd6d # v6

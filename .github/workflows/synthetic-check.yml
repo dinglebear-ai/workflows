@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   synthetic:
-    runs-on: [self-hosted, ci-pool-ops, residential-egress]
+    runs-on: ci-pool-residential-egress
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5

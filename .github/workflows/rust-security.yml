@@ -24,7 +24,7 @@ permissions:
 
 jobs:
   deny:
-    runs-on: [self-hosted, ci-pool-rust]
+    runs-on: ci-pool-rust
     timeout-minutes: ${{ inputs.timeout-minutes }}
     defaults:
       run:

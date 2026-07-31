@@ -32,7 +32,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: [self-hosted, ci-pool-ops]
+    runs-on: ci-pool-ops
     timeout-minutes: ${{ inputs.timeout-minutes }}
     outputs:
       release-created: ${{ steps.release.outputs.release_created }}
