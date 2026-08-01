@@ -88,12 +88,10 @@ jobs:
           manifest-key: ${{ env.KACHE_MANIFEST_KEY }}
           namespace: ${{ env.KACHE_MANIFEST_KEY }}
           pr-comment: "false"
-      - name: Pull the seeded workspace artifact
-        run: >-
-          kache sync --pull --workspace
-          --manifest-path "$CANARY_MANIFEST"
-      - name: Build from the synchronized local store
+      - name: Build from a fresh local store
         run: cargo build --release --locked --manifest-path "$CANARY_MANIFEST"
+      - name: Drain asynchronous Kache transfers
+        run: kache daemon stop
       - name: Require remote cache reuse
         run: |
           kache report --format json --root "$GITHUB_WORKSPACE/$CANARY_ROOT"             | jq '{
