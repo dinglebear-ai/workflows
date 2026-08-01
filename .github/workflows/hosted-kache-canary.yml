@@ -90,7 +90,8 @@ jobs:
           pr-comment: "false"
       - name: Pull the isolated canary cache
         run: |
-          kache sync --pull --all --manifest-path "$CANARY_MANIFEST"             | tee "$RUNNER_TEMP/kache-sync.log"
+          kache sync --pull --all --manifest-path "$CANARY_MANIFEST" 2>&1 \
+            | tee "$RUNNER_TEMP/kache-sync.log"
           grep -Eq 'Downloaded:[[:space:]]+1/1' "$RUNNER_TEMP/kache-sync.log"
       - name: Build from the synchronized local store
         run: cargo build --release --locked --manifest-path "$CANARY_MANIFEST"
