@@ -101,8 +101,8 @@ Internal workflows:
 - `validate-library.yml` keeps the control plane repairable on hosted Linux;
 - `manage-release.yml` owns this repository's Release Please event;
 - `publish-ci-images.yml` publishes images only from a GitHub release;
-- `hosted-kache-canary.yml` seeds MinIO on one hosted runner and requires an
-  on-demand remote restore on a second fresh runner.
+- `hosted-kache-canary.yml` seeds MinIO on one hosted runner and requires
+  remote cache reuse on a second fresh runner.
 
 ## Profiles
 

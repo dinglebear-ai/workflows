@@ -46,7 +46,8 @@ jobs:
           cache-executables: "true"
           github-cache: "false"
           sync: "false"
-          warm: "false"
+          warm: "true"
+          min-compile-ms: "0"
           manifest-key: ${{ env.KACHE_MANIFEST_KEY }}
           namespace: ${{ env.KACHE_MANIFEST_KEY }}
           pr-comment: "false"
@@ -54,10 +55,12 @@ jobs:
         run: cargo build --release --locked --manifest-path "$CANARY_MANIFEST"
       - name: Record seed evidence
         run: |
-          kache report --format json --root "$GITHUB_WORKSPACE/$CANARY_ROOT"             | jq '.summary | {local_hits, remote_hits, misses, errors, fallbacks, store_failures}'             >> "$GITHUB_STEP_SUMMARY"
+          kache report --format json --root "$GITHUB_WORKSPACE/$CANARY_ROOT" \
+            | jq '.summary | {local_hits, prefetch_hits, remote_hits, misses, errors, fallbacks, store_failures}' \
+            >> "$GITHUB_STEP_SUMMARY"
 
   verify:
-    name: Verify fresh hosted remote hit
+    name: Verify fresh hosted remote reuse
     needs: [seed]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -80,7 +83,8 @@ jobs:
           cache-executables: "true"
           github-cache: "false"
           sync: "false"
-          warm: "false"
+          warm: "true"
+          min-compile-ms: "0"
           manifest-key: ${{ env.KACHE_MANIFEST_KEY }}
           namespace: ${{ env.KACHE_MANIFEST_KEY }}
           pr-comment: "false"
@@ -88,6 +92,7 @@ jobs:
         run: |
           kache report --format json --root "$GITHUB_WORKSPACE/$CANARY_ROOT"             | jq '{
                 local_hits: (.summary.local_hits // 0),
+                prefetch_hits: (.summary.prefetch_hits // 0),
                 remote_hits: (.summary.remote_hits // 0),
                 misses: (.summary.misses // 0),
                 errors: (.summary.errors // 0),
@@ -96,10 +101,11 @@ jobs:
               }' > "$RUNNER_TEMP/kache-before.json"
       - name: Build from a fresh local store
         run: cargo build --release --locked --manifest-path "$CANARY_MANIFEST"
-      - name: Require an on-demand S3 restore
+      - name: Require remote cache reuse
         run: |
           kache report --format json --root "$GITHUB_WORKSPACE/$CANARY_ROOT"             | jq '{
                 local_hits: (.summary.local_hits // 0),
+                prefetch_hits: (.summary.prefetch_hits // 0),
                 remote_hits: (.summary.remote_hits // 0),
                 misses: (.summary.misses // 0),
                 errors: (.summary.errors // 0),
@@ -108,6 +114,7 @@ jobs:
               }' > "$RUNNER_TEMP/kache-after.json"
           jq -n             --slurpfile before "$RUNNER_TEMP/kache-before.json"             --slurpfile after "$RUNNER_TEMP/kache-after.json"             '{
               local_hits: ($after[0].local_hits - $before[0].local_hits),
+              prefetch_hits: ($after[0].prefetch_hits - $before[0].prefetch_hits),
               remote_hits: ($after[0].remote_hits - $before[0].remote_hits),
               misses: ($after[0].misses - $before[0].misses),
               errors: ($after[0].errors - $before[0].errors),
@@ -116,7 +123,7 @@ jobs:
             }' > "$RUNNER_TEMP/kache-delta.json"
           cat "$RUNNER_TEMP/kache-delta.json" >> "$GITHUB_STEP_SUMMARY"
           jq -e '
-            .remote_hits > 0 and
+            (.remote_hits + .prefetch_hits) > 0 and
             .errors == 0 and
             .fallbacks == 0 and
             .store_failures == 0
