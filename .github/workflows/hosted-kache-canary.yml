@@ -88,18 +88,11 @@ jobs:
           manifest-key: ${{ env.KACHE_MANIFEST_KEY }}
           namespace: ${{ env.KACHE_MANIFEST_KEY }}
           pr-comment: "false"
-      - name: Snapshot counters before build
-        run: |
-          kache report --format json --root "$GITHUB_WORKSPACE/$CANARY_ROOT"             | jq '{
-                local_hits: (.summary.local_hits // 0),
-                prefetch_hits: (.summary.prefetch_hits // 0),
-                remote_hits: (.summary.remote_hits // 0),
-                misses: (.summary.misses // 0),
-                errors: (.summary.errors // 0),
-                fallbacks: (.summary.fallbacks // 0),
-                store_failures: (.summary.store_failures // 0)
-              }' > "$RUNNER_TEMP/kache-before.json"
-      - name: Build from a fresh local store
+      - name: Pull the seeded workspace artifact
+        run: >-
+          kache sync --pull --workspace
+          --manifest-path "$CANARY_MANIFEST"
+      - name: Build from the synchronized local store
         run: cargo build --release --locked --manifest-path "$CANARY_MANIFEST"
       - name: Require remote cache reuse
         run: |
@@ -110,21 +103,19 @@ jobs:
                 misses: (.summary.misses // 0),
                 errors: (.summary.errors // 0),
                 fallbacks: (.summary.fallbacks // 0),
-                store_failures: (.summary.store_failures // 0)
-              }' > "$RUNNER_TEMP/kache-after.json"
-          jq -n             --slurpfile before "$RUNNER_TEMP/kache-before.json"             --slurpfile after "$RUNNER_TEMP/kache-after.json"             '{
-              local_hits: ($after[0].local_hits - $before[0].local_hits),
-              prefetch_hits: ($after[0].prefetch_hits - $before[0].prefetch_hits),
-              remote_hits: ($after[0].remote_hits - $before[0].remote_hits),
-              misses: ($after[0].misses - $before[0].misses),
-              errors: ($after[0].errors - $before[0].errors),
-              fallbacks: ($after[0].fallbacks - $before[0].fallbacks),
-              store_failures: ($after[0].store_failures - $before[0].store_failures)
-            }' > "$RUNNER_TEMP/kache-delta.json"
-          cat "$RUNNER_TEMP/kache-delta.json" >> "$GITHUB_STEP_SUMMARY"
+                store_failures: (.summary.store_failures // 0),
+                downloads_ok: (.network.downloads_ok // 0),
+                downloads_failed: (.network.downloads_failed // 0),
+                bytes_down: (.network.bytes_down // 0)
+              }' > "$RUNNER_TEMP/kache-evidence.json"
+          cat "$RUNNER_TEMP/kache-evidence.json" >> "$GITHUB_STEP_SUMMARY"
           jq -e '
-            (.remote_hits + .prefetch_hits) > 0 and
+            (.local_hits + .remote_hits + .prefetch_hits) > 0 and
+            .misses == 0 and
+            .downloads_ok > 0 and
+            .bytes_down > 0 and
+            .downloads_failed == 0 and
             .errors == 0 and
             .fallbacks == 0 and
             .store_failures == 0
-          ' "$RUNNER_TEMP/kache-delta.json" >/dev/null
+          ' "$RUNNER_TEMP/kache-evidence.json" >/dev/null
