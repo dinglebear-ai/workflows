@@ -46,7 +46,7 @@ jobs:
           cache-executables: "true"
           github-cache: "false"
           sync: "false"
-          warm: "false"
+          warm: "true"
           min-compile-ms: "0"
           manifest-key: ${{ env.KACHE_MANIFEST_KEY }}
           namespace: ${{ env.KACHE_MANIFEST_KEY }}
