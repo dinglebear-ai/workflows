@@ -33,6 +33,9 @@ on:
       timeout-minutes:
         type: number
         default: 20
+    secrets:
+      NPM_TOKEN:
+        required: false
 
 permissions:
   contents: read
@@ -43,6 +46,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: ${{ inputs.timeout-minutes }}
     environment: npm
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     defaults:
       run:
         shell: bash
@@ -58,6 +63,9 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: ${{ inputs.enable-cache && 'npm' || '' }}
           cache-dependency-path: ${{ inputs.cache-dependency-path }}
+      - name: Validate npm publication identity
+        if: ${{ env.NODE_AUTH_TOKEN != '' }}
+        run: npm whoami >/dev/null
       - name: Require exact package version
         env:
           EXPECTED_VERSION: ${{ inputs.expected-version }}
@@ -79,7 +87,7 @@ jobs:
           set -euo pipefail
           tarball="$(npm pack --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s)[0].filename))')"
           echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
-      - name: Publish verified tarball with OIDC
+      - name: Publish verified tarball
         env:
           TARBALL: ${{ steps.pack.outputs.tarball }}
           ACCESS: ${{ inputs.access }}
