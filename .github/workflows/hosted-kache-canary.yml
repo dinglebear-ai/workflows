@@ -98,7 +98,7 @@ jobs:
         run: kache daemon stop
       - name: Require remote cache reuse
         run: |
-          kache report --format json --root "$GITHUB_WORKSPACE/$CANARY_ROOT"             | jq '{
+          kache report --format json | jq '{
                 local_hits: (.summary.local_hits // 0),
                 prefetch_hits: (.summary.prefetch_hits // 0),
                 remote_hits: (.summary.remote_hits // 0),
