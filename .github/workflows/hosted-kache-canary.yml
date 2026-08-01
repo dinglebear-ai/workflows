@@ -89,9 +89,9 @@ jobs:
           namespace: ${{ env.KACHE_MANIFEST_KEY }}
           pr-comment: "false"
       - name: Pull the isolated canary cache
-        run: >-
-          kache sync --pull --all
-          --manifest-path "$CANARY_MANIFEST"
+        run: |
+          kache sync --pull --all --manifest-path "$CANARY_MANIFEST"             | tee "$RUNNER_TEMP/kache-sync.log"
+          grep -Eq 'Downloaded:[[:space:]]+1/1' "$RUNNER_TEMP/kache-sync.log"
       - name: Build from the synchronized local store
         run: cargo build --release --locked --manifest-path "$CANARY_MANIFEST"
       - name: Drain asynchronous Kache transfers
@@ -105,18 +105,12 @@ jobs:
                 misses: (.summary.misses // 0),
                 errors: (.summary.errors // 0),
                 fallbacks: (.summary.fallbacks // 0),
-                store_failures: (.summary.store_failures // 0),
-                downloads_ok: (.network.downloads_ok // 0),
-                downloads_failed: (.network.downloads_failed // 0),
-                bytes_down: (.network.bytes_down // 0)
+                store_failures: (.summary.store_failures // 0)
               }' > "$RUNNER_TEMP/kache-evidence.json"
           cat "$RUNNER_TEMP/kache-evidence.json" >> "$GITHUB_STEP_SUMMARY"
           jq -e '
             (.local_hits + .remote_hits + .prefetch_hits) > 0 and
             .misses == 0 and
-            .downloads_ok > 0 and
-            .bytes_down > 0 and
-            .downloads_failed == 0 and
             .errors == 0 and
             .fallbacks == 0 and
             .store_failures == 0
