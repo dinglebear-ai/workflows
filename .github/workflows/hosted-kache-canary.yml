@@ -39,14 +39,14 @@ jobs:
           version: "0.12.0"
           s3-bucket: kache
           s3-region: us-east-1
-          s3-prefix: rust
+          s3-prefix: canary
           s3-endpoint: https://s3.tootie.tv
           s3-access-key-id: ${{ secrets.KACHE_S3_ACCESS_KEY }}
           s3-secret-access-key: ${{ secrets.KACHE_S3_SECRET_KEY }}
           cache-executables: "true"
           github-cache: "false"
           sync: "false"
-          warm: "true"
+          warm: "false"
           min-compile-ms: "0"
           manifest-key: ${{ env.KACHE_MANIFEST_KEY }}
           namespace: ${{ env.KACHE_MANIFEST_KEY }}
@@ -76,19 +76,23 @@ jobs:
           version: "0.12.0"
           s3-bucket: kache
           s3-region: us-east-1
-          s3-prefix: rust
+          s3-prefix: canary
           s3-endpoint: https://s3.tootie.tv
           s3-access-key-id: ${{ secrets.KACHE_S3_ACCESS_KEY }}
           s3-secret-access-key: ${{ secrets.KACHE_S3_SECRET_KEY }}
           cache-executables: "true"
           github-cache: "false"
           sync: "false"
-          warm: "true"
+          warm: "false"
           min-compile-ms: "0"
           manifest-key: ${{ env.KACHE_MANIFEST_KEY }}
           namespace: ${{ env.KACHE_MANIFEST_KEY }}
           pr-comment: "false"
-      - name: Build from a fresh local store
+      - name: Pull the isolated canary cache
+        run: >-
+          kache sync --pull --all
+          --manifest-path "$CANARY_MANIFEST"
+      - name: Build from the synchronized local store
         run: cargo build --release --locked --manifest-path "$CANARY_MANIFEST"
       - name: Drain asynchronous Kache transfers
         run: kache daemon stop
