@@ -6,7 +6,7 @@ updated: 2026-07-30
 
 # Workflow catalog
 
-The catalog contains 45 reusable workflows plus three repository-internal
+The catalog contains 45 reusable workflows plus four repository-internal
 control-plane workflows. [`catalog.json`](../catalog.json) is authoritative.
 
 ## Calling a reusable workflow
@@ -100,7 +100,9 @@ Internal workflows:
 
 - `validate-library.yml` keeps the control plane repairable on hosted Linux;
 - `manage-release.yml` owns this repository's Release Please event;
-- `publish-ci-images.yml` publishes images only from a GitHub release.
+- `publish-ci-images.yml` publishes images only from a GitHub release;
+- `hosted-kache-canary.yml` seeds MinIO on one hosted runner and requires
+  remote cache reuse on a second fresh runner.
 
 ## Profiles
 
