@@ -99,6 +99,21 @@ class WorkflowLibraryTests(unittest.TestCase):
                 self.assertIn(tool, dockerfile)
                 self.assertIn(f"{tool} --version", smoke)
 
+    def test_hosted_python_wheels_use_platform_specific_architectures(self) -> None:
+        workflow = yaml.load(
+            (ROOT / ".github/workflows/hosted-python-wheels.yml").read_text(),
+            Loader=yaml.BaseLoader,
+        )
+        matrix = workflow["jobs"]["wheels"]["strategy"]["matrix"]["include"]
+        architectures = {entry["platform"]: entry.get("arch") for entry in matrix}
+
+        self.assertEqual(
+            architectures,
+            {"linux": "x86_64", "macos": "x86_64", "windows": "AMD64"},
+        )
+        text = (ROOT / ".github/workflows/hosted-python-wheels.yml").read_text()
+        self.assertIn("CIBW_ARCHS: ${{ matrix.arch }}", text)
+
     def test_marketplace_caches_are_independently_optional(self) -> None:
         workflow = yaml.load(
             (ROOT / ".github/workflows/marketplace-ci.yml").read_text(),
