@@ -128,7 +128,6 @@ class WorkflowLibraryTests(unittest.TestCase):
             "@a257c055543c2840700a9bbca8f9c3094a421b1b"
         )
         for workflow_name in (
-            "fast-rust.yml",
             "hosted-incus-image.yml",
             "hosted-rust-release.yml",
         ):
@@ -137,6 +136,19 @@ class WorkflowLibraryTests(unittest.TestCase):
                 self.assertIn(pinned, text)
                 self.assertIn("\n          namespace:", text)
                 self.assertIn('\n          pr-comment: "false"', text)
+
+    def test_fast_rust_uses_private_fleet_kache_contract(self) -> None:
+        path = ROOT / ".github/workflows/fast-rust.yml"
+        workflow = yaml.load(path.read_text(), Loader=yaml.BaseLoader)
+        call = workflow["on"]["workflow_call"]
+        self.assertEqual(call["secrets"]["KACHE_S3_ACCESS_KEY"]["required"], "false")
+        self.assertEqual(call["secrets"]["KACHE_S3_SECRET_KEY"]["required"], "false")
+        text = path.read_text()
+        self.assertIn("runs-on: ci-pool-rust", text)
+        self.assertIn("uses: ./.github/actions/setup-rust-kache", text)
+        self.assertIn('enable-cache: "true"', text)
+        self.assertNotIn("kunobi-ninja/kache-action", text)
+        self.assertNotIn("s3.tootie.tv", text)
 
     def test_fast_rust_supports_optional_project_setup(self) -> None:
         workflow = yaml.load(
