@@ -113,6 +113,10 @@ class WorkflowLibraryTests(unittest.TestCase):
         )
         text = (ROOT / ".github/workflows/hosted-python-wheels.yml").read_text()
         self.assertIn("CIBW_ARCHS: ${{ matrix.arch }}", text)
+        self.assertIn(
+            "CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.12",
+            text,
+        )
 
     def test_marketplace_caches_are_independently_optional(self) -> None:
         workflow = yaml.load(

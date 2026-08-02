@@ -62,6 +62,7 @@ jobs:
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_BEFORE_BUILD: ${{ inputs.before-build }}
           CIBW_BUILD: ${{ inputs.cibw-build }}
+          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.12
           CIBW_TEST_COMMAND: ${{ inputs.test-command }}
         with:
           package-dir: ${{ inputs.package-dir }}
