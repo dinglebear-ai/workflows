@@ -35,11 +35,14 @@ on:
       kache-manifest-key:
         type: string
         default: fast-rust
+    # Retained as optional compatibility inputs for immutable callers pinned
+    # to older workflow SHAs. Private runner-farm jobs use the NFS remote and
+    # do not consume S3 credentials.
     secrets:
       KACHE_S3_ACCESS_KEY:
-        required: true
+        required: false
       KACHE_S3_SECRET_KEY:
-        required: true
+        required: false
 
 permissions:
   contents: read
@@ -56,24 +59,14 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+      # ci-pool-rust is the private Ubuntu 26.04 fleet. Its canonical remote
+      # is the bind-mounted NFS cache, not hosted MinIO. The caller repository
+      # owns this composite action and its fleet-pinned Kache contract.
+      - uses: ./.github/actions/setup-rust-kache
         with:
           toolchain: ${{ inputs.toolchain }}
           components: rustfmt, clippy
-      - uses: kunobi-ninja/kache-action@a257c055543c2840700a9bbca8f9c3094a421b1b
-        with:
-          version: "0.12.0"
-          s3-bucket: kache
-          s3-region: us-east-1
-          s3-prefix: rust
-          s3-endpoint: https://s3.tootie.tv
-          s3-access-key-id: ${{ secrets.KACHE_S3_ACCESS_KEY }}
-          s3-secret-access-key: ${{ secrets.KACHE_S3_SECRET_KEY }}
-          manifest-key: ${{ inputs.kache-manifest-key }}
-          namespace: ${{ inputs.kache-manifest-key }}
-          warm: "true"
-          sync: "false"
-          pr-comment: "false"
+          enable-cache: "true"
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         if: inputs.uv-version != ''
         with:
