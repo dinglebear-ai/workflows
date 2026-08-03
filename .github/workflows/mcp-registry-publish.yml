@@ -17,7 +17,7 @@ on:
         default: github-oidc
       registry-domain:
         type: string
-        default: ""
+        default: dinglebear.ai
       package-visible-command:
         type: string
         required: true
@@ -87,7 +87,7 @@ jobs:
           MCP_PRIVATE_KEY: ${{ secrets.MCP_PRIVATE_KEY }}
         run: |
           set -euo pipefail
-          test -n "$DOMAIN"
+          test "$DOMAIN" = dinglebear.ai
           test -n "$MCP_PRIVATE_KEY"
           ./mcp-publisher login dns --domain "$DOMAIN" --private-key "$MCP_PRIVATE_KEY"
       - name: Reject unsupported authentication method
