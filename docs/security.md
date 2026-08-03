@@ -49,6 +49,12 @@ Publication runs on clean GitHub-hosted runners and uses protected environments.
 Prefer OIDC trusted publishing for npm, PyPI, and MCP Registry. Long-lived
 tokens are limited to registries that do not support the required OIDC flow.
 
+DingleBear MCP Registry callers use DNS ownership with the repository secret
+`MCP_PRIVATE_KEY`. The reusable workflow requires the manifest namespace
+`ai.dinglebear`, DNS proof `dinglebear.ai`, and a `dinglebear-ai` repository URL
+before the private key is read. Runtime service domains such as `tootie.tv` are
+never valid publisher identities.
+
 The release graph validates one artifact or digest and promotes those exact
 bytes. Rebuilding independently at each publication step is forbidden.
 

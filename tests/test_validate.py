@@ -280,3 +280,34 @@ class WorkflowLibraryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class McpRegistryWorkflowTests(unittest.TestCase):
+    def test_mcp_registry_workflow_is_canonical_and_idempotent(self) -> None:
+        path = ROOT / ".github/workflows/mcp-registry-publish.yml"
+        workflow = yaml.load(path.read_text(), Loader=yaml.BaseLoader)
+        inputs = workflow["on"]["workflow_call"]["inputs"]
+        self.assertEqual(inputs["registry-domain"]["default"], "dinglebear.ai")
+        self.assertEqual(inputs["auth-method"]["default"], "dns")
+        self.assertEqual(inputs["expected-version"]["default"], "")
+        self.assertEqual(inputs["version-prefix"]["default"], "v")
+        text = path.read_text()
+        for required in (
+            "ai.dinglebear/",
+            "publisher namespace must be ai.dinglebear",
+            "publisher dnsDomain must be dinglebear.ai",
+            "manifest description exceeds the Registry limit",
+            "docker\", \"manifest\", \"inspect",
+            "Reconcile existing Registry state",
+            "Verify public Registry state",
+            "public Registry entry is not active",
+        ):
+            self.assertIn(required, text)
+
+    def test_mcp_registry_caller_template_pins_the_library(self) -> None:
+        path = ROOT / "templates/callers/mcp-registry.yml"
+        workflow = yaml.load(path.read_text(), Loader=yaml.BaseLoader)
+        self.assertEqual(set(workflow["on"]), {"release", "workflow_dispatch"})
+        publish = workflow["jobs"]["publish"]
+        self.assertIn("@WORKFLOW_LIBRARY_SHA", publish["uses"])
+        self.assertEqual(publish["with"]["auth-method"], "dns")
+        self.assertEqual(publish["with"]["manifest-path"], "server.json")

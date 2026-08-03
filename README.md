@@ -106,9 +106,12 @@ control-plane workflows.
 ### MCP
 
 - Pinned official MCP conformance suite with retained evidence.
-- Official MCP Registry publication through GitHub OIDC or DNS ownership.
-- Package visibility checks before registry publication.
-- Exact `server.json` version validation and post-publication verification.
+- Official MCP Registry publication through GitHub OIDC or canonical
+  `dinglebear.ai` DNS ownership.
+- Generic npm, PyPI, and OCI package visibility checks before publication.
+- Fail-closed `ai.dinglebear/*` identity, repository, namespace, DNS-domain,
+  version, and 100-character description validation.
+- Duplicate-safe reconciliation plus public active-status/package verification.
 
 ### Release orchestration
 

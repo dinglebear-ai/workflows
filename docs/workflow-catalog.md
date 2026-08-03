@@ -79,7 +79,7 @@ pure-Rust callers free of Python tooling.
 | `install-contract.yml` | fast | Policy | Installer and release-asset agreement |
 | `marketplace-ci.yml` | fast | Marketplace | Structural validation and installation smoke with independently optional pip/npm caches |
 | `mcp-conformance.yml` | release | MCP | Pinned official full MCP conformance evidence |
-| `mcp-registry-publish.yml` | release | MCP | Official MCP Registry publication and verification |
+| `mcp-registry-publish.yml` | release | MCP | Canonical DingleBear identity and package validation, idempotent official Registry publication, and public active-state verification |
 | `npm-trusted-publish.yml` | release | TypeScript | Pack, verify, and OIDC-publish exact npm tarball, including dependency-free packages without lockfiles |
 | `pages-deploy.yml` | deployment | TypeScript | Build and deploy Pages with split permissions |
 | `python-security.yml` | fast | Python | Audit a frozen dependency export |
