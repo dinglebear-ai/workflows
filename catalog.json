@@ -112,7 +112,7 @@
     {"file": "marketplace-ci.yml", "kind": "fast", "category": "marketplace", "summary": "Parallel Python structural validation and Node installation smoke with optional caches."},
     {"file": "manage-release.yml", "kind": "internal", "category": "release", "summary": "Run Release Please for this canonical workflow library."},
     {"file": "mcp-conformance.yml", "kind": "release", "category": "mcp", "summary": "Run the pinned official full MCP conformance suite and retain evidence."},
-    {"file": "mcp-registry-publish.yml", "kind": "release", "category": "mcp", "summary": "Publish verified server metadata to the official MCP Registry."},
+    {"file": "mcp-registry-publish.yml", "kind": "release", "category": "mcp", "summary": "Validate canonical DingleBear identity, reconcile package visibility, publish idempotently, and verify the official MCP Registry."},
     {"file": "npm-trusted-publish.yml", "kind": "release", "category": "typescript", "summary": "Pack, verify, and trusted-publish the exact npm tarball."},
     {"file": "pages-deploy.yml", "kind": "deployment", "category": "typescript", "summary": "Build and deploy GitHub Pages with split permissions."},
     {"file": "python-security.yml", "kind": "fast", "category": "python", "summary": "Audit a frozen Python dependency export."},

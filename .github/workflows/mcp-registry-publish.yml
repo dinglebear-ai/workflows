@@ -8,22 +8,25 @@ on:
         required: true
       expected-version:
         type: string
-        required: true
+        default: ""
+      version-prefix:
+        type: string
+        default: v
       manifest-path:
         type: string
         default: server.json
       auth-method:
         type: string
-        default: github-oidc
+        default: dns
       registry-domain:
         type: string
         default: dinglebear.ai
       package-visible-command:
         type: string
-        required: true
+        default: ""
       verify-command:
         type: string
-        required: true
+        default: ""
       publisher-version:
         type: string
         default: "1.7.9"
@@ -51,23 +54,140 @@ jobs:
         with:
           ref: ${{ inputs.checkout-ref }}
           persist-credentials: false
-      - name: Require exact manifest version
+
+      - id: manifest
+        name: Validate canonical DingleBear manifest
         env:
-          MANIFEST_PATH: ${{ inputs.manifest-path }}
           EXPECTED_VERSION: ${{ inputs.expected-version }}
+          MANIFEST_PATH: ${{ inputs.manifest-path }}
+          VERSION_PREFIX: ${{ inputs.version-prefix }}
         run: |
           set -euo pipefail
-          test -f "$MANIFEST_PATH"
-          test "$(jq -r '.version' "$MANIFEST_PATH")" = "$EXPECTED_VERSION"
-          jq -e '.name | type == "string" and length > 0' "$MANIFEST_PATH" >/dev/null
-      - name: Require package visibility
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+          import urllib.parse
+          from pathlib import Path
+
+          path = Path(os.environ["MANIFEST_PATH"])
+          if not path.is_file():
+              raise SystemExit(f"manifest does not exist: {path}")
+
+          manifest = json.loads(path.read_text(encoding="utf-8"))
+          name = manifest.get("name")
+          version = manifest.get("version")
+          description = manifest.get("description")
+          if not isinstance(name, str) or not name.startswith("ai.dinglebear/"):
+              raise SystemExit(f"server name must use ai.dinglebear/: {name!r}")
+          if not isinstance(version, str) or not version:
+              raise SystemExit("manifest version must be a non-empty string")
+          if not isinstance(description, str) or not description:
+              raise SystemExit("manifest description must be a non-empty string")
+          if len(description) > 100:
+              raise SystemExit(
+                  f"manifest description exceeds the Registry limit: {len(description)} > 100"
+              )
+
+          expected = os.environ.get("EXPECTED_VERSION", "")
+          prefix = os.environ.get("VERSION_PREFIX", "")
+          if expected and prefix and expected.startswith(prefix):
+              expected = expected[len(prefix):]
+          if expected and expected != version:
+              raise SystemExit(
+                  f"manifest version {version!r} does not match expected {expected!r}"
+              )
+
+          publisher = (
+              manifest.get("_meta", {})
+              .get("io.modelcontextprotocol.registry/publisher-provided", {})
+          )
+          if publisher.get("namespace") != "ai.dinglebear":
+              raise SystemExit("publisher namespace must be ai.dinglebear")
+          if publisher.get("dnsDomain") != "dinglebear.ai":
+              raise SystemExit("publisher dnsDomain must be dinglebear.ai")
+
+          repository = manifest.get("repository", {})
+          repository_url = repository.get("url", "")
+          if "github.com/dinglebear-ai/" not in repository_url:
+              raise SystemExit(
+                  f"repository URL must belong to dinglebear-ai: {repository_url!r}"
+              )
+
+          packages = manifest.get("packages")
+          if not isinstance(packages, list) or not packages:
+              raise SystemExit("manifest must contain at least one package")
+          for index, package in enumerate(packages):
+              kind = package.get("registryType")
+              identifier = package.get("identifier")
+              if not isinstance(identifier, str) or not identifier:
+                  raise SystemExit(f"package {index} has no identifier")
+              if kind == "npm" and not identifier.startswith("@dinglebear/"):
+                  raise SystemExit(
+                      f"npm package {index} must use the @dinglebear scope: {identifier}"
+                  )
+              if kind == "oci" and not identifier.startswith("ghcr.io/dinglebear-ai/"):
+                  raise SystemExit(
+                      f"OCI package {index} must use ghcr.io/dinglebear-ai/: {identifier}"
+                  )
+              if kind not in {"npm", "pypi", "oci"}:
+                  raise SystemExit(f"unsupported package registryType {kind!r}")
+
+          print(f"name={name}")
+          print(f"version={version}")
+          print(f"encoded_name={urllib.parse.quote(name, safe='')}")
+          print(f"encoded_version={urllib.parse.quote(version, safe='')}")
+          PY
+
+      - name: Require referenced package visibility
         env:
           COMMAND: ${{ inputs.package-visible-command }}
-        run: bash -euo pipefail -c "$COMMAND"
+          MANIFEST_PATH: ${{ inputs.manifest-path }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$COMMAND" ]]; then
+            bash -euo pipefail -c "$COMMAND"
+            exit 0
+          fi
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          import urllib.parse
+          import urllib.request
+
+          manifest = json.load(open(os.environ["MANIFEST_PATH"], encoding="utf-8"))
+          manifest_version = manifest["version"]
+          for package in manifest["packages"]:
+              kind = package["registryType"]
+              identifier = package["identifier"]
+              version = package.get("version") or manifest_version
+              if kind == "npm":
+                  spec = f"{identifier}@{version}"
+                  found = subprocess.check_output(
+                      ["npm", "view", spec, "version"], text=True
+                  ).strip()
+                  if found != version:
+                      raise SystemExit(f"npm returned {found!r} for {spec}")
+              elif kind == "pypi":
+                  name = urllib.parse.quote(identifier, safe="")
+                  release = urllib.parse.quote(version, safe="")
+                  url = f"https://pypi.org/pypi/{name}/{release}/json"
+                  with urllib.request.urlopen(url, timeout=30) as response:
+                      if response.status != 200:
+                          raise SystemExit(f"PyPI returned {response.status} for {url}")
+              elif kind == "oci":
+                  subprocess.run(
+                      ["docker", "manifest", "inspect", identifier],
+                      check=True,
+                      stdout=subprocess.DEVNULL,
+                  )
+              print(f"visible: {kind}:{identifier}@{version}")
+          PY
+
       - name: Install verified mcp-publisher
         env:
-          VERSION: ${{ inputs.publisher-version }}
           EXPECTED_SHA256: ${{ inputs.publisher-sha256 }}
+          VERSION: ${{ inputs.publisher-version }}
         run: |
           set -euo pipefail
           archive=mcp-publisher_linux_amd64.tar.gz
@@ -77,11 +197,55 @@ jobs:
           tar --extract --gzip --file "$archive" mcp-publisher
           chmod +x mcp-publisher
           ./mcp-publisher --version
+
+      - id: registry
+        name: Reconcile existing Registry state
+        env:
+          ENCODED_NAME: ${{ steps.manifest.outputs.encoded_name }}
+          ENCODED_VERSION: ${{ steps.manifest.outputs.encoded_version }}
+          EXPECTED_NAME: ${{ steps.manifest.outputs.name }}
+          EXPECTED_VERSION: ${{ steps.manifest.outputs.version }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          url = (
+              "https://registry.modelcontextprotocol.io/v0.1/servers/"
+              f"{os.environ['ENCODED_NAME']}/versions/{os.environ['ENCODED_VERSION']}"
+          )
+          try:
+              with urllib.request.urlopen(url, timeout=30) as response:
+                  payload = json.load(response)
+          except urllib.error.HTTPError as error:
+              if error.code == 404:
+                  print("exists=false")
+                  raise SystemExit(0)
+              raise
+
+          server = payload.get("server", {})
+          if server.get("name") != os.environ["EXPECTED_NAME"]:
+              raise SystemExit("existing Registry entry has the wrong name")
+          if server.get("version") != os.environ["EXPECTED_VERSION"]:
+              raise SystemExit("existing Registry entry has the wrong version")
+          publisher = (
+              server.get("_meta", {})
+              .get("io.modelcontextprotocol.registry/publisher-provided", {})
+          )
+          if publisher.get("dnsDomain") != "dinglebear.ai":
+              raise SystemExit("existing Registry entry has the wrong dnsDomain")
+          print("exists=true")
+          PY
+
       - name: Authenticate with GitHub OIDC
-        if: inputs.auth-method == 'github-oidc'
+        if: steps.registry.outputs.exists != 'true' && inputs.auth-method == 'github-oidc'
         run: ./mcp-publisher login github-oidc
+
       - name: Authenticate with DNS ownership
-        if: inputs.auth-method == 'dns'
+        if: steps.registry.outputs.exists != 'true' && inputs.auth-method == 'dns'
         env:
           DOMAIN: ${{ inputs.registry-domain }}
           MCP_PRIVATE_KEY: ${{ secrets.MCP_PRIVATE_KEY }}
@@ -90,19 +254,85 @@ jobs:
           test "$DOMAIN" = dinglebear.ai
           test -n "$MCP_PRIVATE_KEY"
           ./mcp-publisher login dns --domain "$DOMAIN" --private-key "$MCP_PRIVATE_KEY"
+
       - name: Reject unsupported authentication method
-        if: inputs.auth-method != 'github-oidc' && inputs.auth-method != 'dns'
+        if: steps.registry.outputs.exists != 'true' && inputs.auth-method != 'github-oidc' && inputs.auth-method != 'dns'
         env:
           AUTH_METHOD: ${{ inputs.auth-method }}
         run: |
           echo "::error::unsupported MCP Registry auth method: $AUTH_METHOD"
           exit 1
+
       - name: Publish validated manifest
+        if: steps.registry.outputs.exists != 'true'
         env:
           MANIFEST_PATH: ${{ inputs.manifest-path }}
         run: ./mcp-publisher publish "$MANIFEST_PATH"
-      - name: Verify published registry state
+
+      - name: Verify public Registry state
+        env:
+          ENCODED_NAME: ${{ steps.manifest.outputs.encoded_name }}
+          ENCODED_VERSION: ${{ steps.manifest.outputs.encoded_version }}
+          MANIFEST_PATH: ${{ inputs.manifest-path }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.request
+
+          manifest = json.load(open(os.environ["MANIFEST_PATH"], encoding="utf-8"))
+          url = (
+              "https://registry.modelcontextprotocol.io/v0.1/servers/"
+              f"{os.environ['ENCODED_NAME']}/versions/{os.environ['ENCODED_VERSION']}"
+          )
+          last_error = None
+          for attempt in range(1, 21):
+              try:
+                  with urllib.request.urlopen(url, timeout=30) as response:
+                      payload = json.load(response)
+                  server = payload["server"]
+                  if server.get("name") != manifest["name"]:
+                      raise AssertionError("public Registry name differs from manifest")
+                  if server.get("version") != manifest["version"]:
+                      raise AssertionError("public Registry version differs from manifest")
+                  publisher = server.get("_meta", {}).get(
+                      "io.modelcontextprotocol.registry/publisher-provided", {}
+                  )
+                  if publisher.get("dnsDomain") != "dinglebear.ai":
+                      raise AssertionError("public Registry dnsDomain is not dinglebear.ai")
+                  official = payload.get("_meta", {}).get(
+                      "io.modelcontextprotocol.registry/official", {}
+                  )
+                  if official.get("status") != "active":
+                      raise AssertionError("public Registry entry is not active")
+                  expected = {
+                      (package["registryType"], package["identifier"], package.get("version"))
+                      for package in manifest["packages"]
+                  }
+                  actual = {
+                      (package["registryType"], package["identifier"], package.get("version"))
+                      for package in server.get("packages", [])
+                  }
+                  if expected != actual:
+                      raise AssertionError(
+                          f"public Registry packages differ: expected {expected}, got {actual}"
+                      )
+                  print(
+                      f"verified active Registry entry {server['name']} {server['version']} "
+                      f"(attempt {attempt})"
+                  )
+                  raise SystemExit(0)
+              except Exception as error:
+                  last_error = error
+                  if attempt < 20:
+                      time.sleep(5)
+          raise SystemExit(f"Registry verification failed: {last_error}")
+          PY
+
+      - name: Run caller-specific verification
+        if: inputs.verify-command != ''
         env:
           COMMAND: ${{ inputs.verify-command }}
         run: bash -euo pipefail -c "$COMMAND"
-
