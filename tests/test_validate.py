@@ -118,6 +118,22 @@ class WorkflowLibraryTests(unittest.TestCase):
             text,
         )
 
+    def test_npm_trusted_publish_is_token_free_and_oidc_capable(self) -> None:
+        path = ROOT / ".github/workflows/npm-trusted-publish.yml"
+        workflow = yaml.load(path.read_text(), Loader=yaml.BaseLoader)
+        call = workflow["on"]["workflow_call"]
+        publish = workflow["jobs"]["publish"]
+        text = path.read_text()
+
+        self.assertNotIn("secrets", call)
+        self.assertNotIn("env", publish)
+        self.assertEqual(call["inputs"]["node-version"]["default"], "24")
+        self.assertEqual(call["inputs"]["npm-version"]["default"], "11.5.1")
+        self.assertIn('npm install --global "npm@${NPM_VERSION}"', text)
+        self.assertNotIn("NODE_AUTH_TOKEN", text)
+        self.assertNotIn("NPM_TOKEN", text)
+        self.assertNotIn("npm whoami", text)
+
     def test_marketplace_caches_are_independently_optional(self) -> None:
         workflow = yaml.load(
             (ROOT / ".github/workflows/marketplace-ci.yml").read_text(),

@@ -11,7 +11,10 @@ on:
         required: true
       node-version:
         type: string
-        default: "22"
+        default: "24"
+      npm-version:
+        type: string
+        default: "11.5.1"
       working-directory:
         type: string
         default: "."
@@ -33,10 +36,6 @@ on:
       timeout-minutes:
         type: number
         default: 20
-    secrets:
-      NPM_TOKEN:
-        required: false
-
 permissions:
   contents: read
   id-token: write
@@ -46,8 +45,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: ${{ inputs.timeout-minutes }}
     environment: npm
-    env:
-      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     defaults:
       run:
         shell: bash
@@ -63,9 +60,10 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: ${{ inputs.enable-cache && 'npm' || '' }}
           cache-dependency-path: ${{ inputs.cache-dependency-path }}
-      - name: Validate npm publication identity
-        if: ${{ env.NODE_AUTH_TOKEN != '' }}
-        run: npm whoami >/dev/null
+      - name: Install OIDC-capable npm CLI
+        env:
+          NPM_VERSION: ${{ inputs.npm-version }}
+        run: npm install --global "npm@${NPM_VERSION}"
       - name: Require exact package version
         env:
           EXPECTED_VERSION: ${{ inputs.expected-version }}
