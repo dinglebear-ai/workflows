@@ -106,8 +106,7 @@ control-plane workflows.
 ### MCP
 
 - Pinned official MCP conformance suite with retained evidence.
-- Official MCP Registry publication through GitHub OIDC or canonical
-  `dinglebear.ai` DNS ownership.
+- Official MCP Registry publication through canonical `dinglebear.ai` DNS ownership.
 - Generic npm, PyPI, and OCI package visibility checks before publication.
 - Fail-closed `ai.dinglebear/*` identity, repository, namespace, DNS-domain,
   version, and 100-character description validation.
@@ -184,8 +183,8 @@ Required secrets vary by workflow:
 - MCP DNS ownership only: `MCP_PRIVATE_KEY`
 - container registry: `REGISTRY_USERNAME`, `REGISTRY_TOKEN`
 
-npm, PyPI, and the preferred MCP Registry flow use OIDC and do not need
-long-lived publication tokens.
+npm and PyPI use OIDC. DingleBear MCP Registry publication uses the
+`dinglebear.ai` DNS proof and the `MCP_PRIVATE_KEY` repository secret.
 
 ## Updating callers
 

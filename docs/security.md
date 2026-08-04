@@ -46,8 +46,8 @@ directly into a shell program.
 ## Publication
 
 Publication runs on clean GitHub-hosted runners and uses protected environments.
-Prefer OIDC trusted publishing for npm, PyPI, and MCP Registry. Long-lived
-tokens are limited to registries that do not support the required OIDC flow.
+Prefer OIDC trusted publishing for npm and PyPI. DingleBear MCP Registry
+publication uses DNS ownership for the `ai.dinglebear/*` namespace.
 
 DingleBear MCP Registry callers use DNS ownership with the repository secret
 `MCP_PRIVATE_KEY`. The reusable workflow requires the manifest namespace
