@@ -287,7 +287,7 @@ class McpRegistryWorkflowTests(unittest.TestCase):
         workflow = yaml.load(path.read_text(), Loader=yaml.BaseLoader)
         inputs = workflow["on"]["workflow_call"]["inputs"]
         self.assertEqual(inputs["registry-domain"]["default"], "dinglebear.ai")
-        self.assertEqual(inputs["auth-method"]["default"], "dns")
+        self.assertNotIn("auth-method", inputs)
         self.assertEqual(inputs["expected-version"]["default"], "")
         self.assertEqual(inputs["version-prefix"]["default"], "v")
         text = path.read_text()
@@ -295,6 +295,8 @@ class McpRegistryWorkflowTests(unittest.TestCase):
             "ai.dinglebear/",
             "publisher namespace must be ai.dinglebear",
             "publisher dnsDomain must be dinglebear.ai",
+            "Authenticate with DNS ownership",
+            "mcp-publisher login dns",
             "manifest description exceeds the Registry limit",
             "docker\", \"manifest\", \"inspect",
             "Reconcile existing Registry state",
@@ -312,5 +314,5 @@ class McpRegistryWorkflowTests(unittest.TestCase):
         self.assertEqual(set(workflow["on"]), {"release", "workflow_dispatch"})
         publish = workflow["jobs"]["publish"]
         self.assertIn("@WORKFLOW_LIBRARY_SHA", publish["uses"])
-        self.assertEqual(publish["with"]["auth-method"], "dns")
+        self.assertNotIn("auth-method", publish["with"])
         self.assertEqual(publish["with"]["manifest-path"], "server.json")

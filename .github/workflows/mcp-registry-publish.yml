@@ -15,9 +15,6 @@ on:
       manifest-path:
         type: string
         default: server.json
-      auth-method:
-        type: string
-        default: dns
       registry-domain:
         type: string
         default: dinglebear.ai
@@ -42,7 +39,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   publish:
@@ -269,12 +265,8 @@ jobs:
           print("exists=true")
           PY
 
-      - name: Authenticate with GitHub OIDC
-        if: steps.registry.outputs.exists != 'true' && inputs.auth-method == 'github-oidc'
-        run: ./mcp-publisher login github-oidc
-
       - name: Authenticate with DNS ownership
-        if: steps.registry.outputs.exists != 'true' && inputs.auth-method == 'dns'
+        if: steps.registry.outputs.exists != 'true'
         env:
           DOMAIN: ${{ inputs.registry-domain }}
           MCP_PRIVATE_KEY: ${{ secrets.MCP_PRIVATE_KEY }}
@@ -283,14 +275,6 @@ jobs:
           test "$DOMAIN" = dinglebear.ai
           test -n "$MCP_PRIVATE_KEY"
           ./mcp-publisher login dns --domain "$DOMAIN" --private-key "$MCP_PRIVATE_KEY"
-
-      - name: Reject unsupported authentication method
-        if: steps.registry.outputs.exists != 'true' && inputs.auth-method != 'github-oidc' && inputs.auth-method != 'dns'
-        env:
-          AUTH_METHOD: ${{ inputs.auth-method }}
-        run: |
-          echo "::error::unsupported MCP Registry auth method: $AUTH_METHOD"
-          exit 1
 
       - name: Publish validated manifest
         if: steps.registry.outputs.exists != 'true'
