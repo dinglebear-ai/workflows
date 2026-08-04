@@ -152,36 +152,65 @@ jobs:
           import json
           import os
           import subprocess
+          import time
           import urllib.parse
           import urllib.request
 
           manifest = json.load(open(os.environ["MANIFEST_PATH"], encoding="utf-8"))
+          manifest_name = manifest["name"]
           manifest_version = manifest["version"]
-          for package in manifest["packages"]:
-              kind = package["registryType"]
-              identifier = package["identifier"]
-              version = package.get("version") or manifest_version
-              if kind == "npm":
-                  spec = f"{identifier}@{version}"
-                  found = subprocess.check_output(
-                      ["npm", "view", spec, "version"], text=True
-                  ).strip()
-                  if found != version:
-                      raise SystemExit(f"npm returned {found!r} for {spec}")
-              elif kind == "pypi":
-                  name = urllib.parse.quote(identifier, safe="")
-                  release = urllib.parse.quote(version, safe="")
-                  url = f"https://pypi.org/pypi/{name}/{release}/json"
-                  with urllib.request.urlopen(url, timeout=30) as response:
-                      if response.status != 200:
-                          raise SystemExit(f"PyPI returned {response.status} for {url}")
-              elif kind == "oci":
-                  subprocess.run(
-                      ["docker", "manifest", "inspect", identifier],
-                      check=True,
-                      stdout=subprocess.DEVNULL,
-                  )
-              print(f"visible: {kind}:{identifier}@{version}")
+          last_error = None
+          for attempt in range(1, 21):
+              try:
+                  for package in manifest["packages"]:
+                      kind = package["registryType"]
+                      identifier = package["identifier"]
+                      version = package.get("version") or manifest_version
+                      if kind == "npm":
+                          spec = f"{identifier}@{version}"
+                          raw = subprocess.check_output(
+                              ["npm", "view", spec, "version", "mcpName", "--json"],
+                              text=True,
+                          )
+                          metadata = json.loads(raw)
+                          if metadata.get("version") != version:
+                              raise RuntimeError(
+                                  f"npm returned {metadata.get('version')!r} for {spec}"
+                              )
+                          if metadata.get("mcpName") != manifest_name:
+                              raise RuntimeError(
+                                  f"npm {spec} mcpName {metadata.get('mcpName')!r} "
+                                  f"does not match {manifest_name!r}"
+                              )
+                      elif kind == "pypi":
+                          name = urllib.parse.quote(identifier, safe="")
+                          release = urllib.parse.quote(version, safe="")
+                          url = f"https://pypi.org/pypi/{name}/{release}/json"
+                          with urllib.request.urlopen(url, timeout=30) as response:
+                              payload = json.load(response)
+                          description = payload.get("info", {}).get("description", "")
+                          if f"mcp-name: {manifest_name}" not in description:
+                              raise RuntimeError(
+                                  f"PyPI {identifier} {version} does not prove {manifest_name} ownership"
+                              )
+                      elif kind == "oci":
+                          subprocess.run(
+                              ["docker", "manifest", "inspect", identifier],
+                              check=True,
+                              stdout=subprocess.DEVNULL,
+                          )
+                      print(f"visible: {kind}:{identifier}@{version}")
+                  print(f"all packages visible with ownership proof (attempt {attempt})")
+                  raise SystemExit(0)
+              except Exception as error:
+                  last_error = error
+                  if attempt < 20:
+                      print(
+                          f"package visibility not ready (attempt {attempt}/20): {error}; "
+                          "retrying in 15s"
+                      )
+                      time.sleep(15)
+          raise SystemExit(f"package visibility failed: {last_error}")
           PY
 
       - name: Install verified mcp-publisher

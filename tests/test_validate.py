@@ -300,6 +300,9 @@ class McpRegistryWorkflowTests(unittest.TestCase):
             "Reconcile existing Registry state",
             "Verify public Registry state",
             "public Registry entry is not active",
+            "for attempt in range(1, 21)",
+            "mcpName",
+            "mcp-name:",
         ):
             self.assertIn(required, text)
 
