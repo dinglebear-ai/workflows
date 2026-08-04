@@ -1,7 +1,7 @@
 ---
 title: Architecture
 created: 2026-07-30
-updated: 2026-07-30
+updated: 2026-08-04
 ---
 
 # Architecture
@@ -42,6 +42,22 @@ The repository `main` branch is development state. The effective API version
 for a caller is the exact commit SHA in its `uses:` line. Human-readable
 releases/changelogs may group changes, but moving tags are never caller
 dependencies.
+
+## Rust cache model
+
+The private Linux fleet uses one Kache topology across repositories:
+
+- Each Tootie runner owns an isolated 80 GiB local L1 store. Dookie owns a
+  separate 100 GiB local L1 store.
+- The only shared remote is the MinIO S3 prefix `s3://kache/rust`.
+- The retired NFS cache is not mounted, mirrored, or retained as a fallback.
+- Runners preserve the host-provided Kache configuration and run one supervised
+  daemon. Dookie runs one user-systemd-owned daemon.
+- Jobs without the private S3 profile remain local-only. They must not invent a
+  filesystem remote or overwrite an existing host configuration.
+
+The full rationale, migration evidence, and operational consequences are in
+[ADR 0001](./adr/0001-kache-minio-single-remote.md).
 
 ## Release graph
 

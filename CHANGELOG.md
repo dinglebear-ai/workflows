@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Documentation
+
+* document the MinIO-only Kache remote, isolated local L1 stores, and retired
+  NFS architecture
+
 ## 1.0.0 (2026-08-01)
 
 
