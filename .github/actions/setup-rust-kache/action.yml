@@ -1,0 +1,318 @@
+name: Setup Rust with fleet Kache
+description: Install Rust, preserve managed persistent Kache, or configure an ephemeral MinIO-backed cache.
+
+inputs:
+  toolchain:
+    description: Rust toolchain to install.
+    required: false
+    default: "1.97.1"
+  components:
+    description: Comma-separated Rust components to install.
+    required: false
+    default: ""
+  targets:
+    description: Comma-separated Rust targets to install.
+    required: false
+    default: ""
+  linux-packages:
+    description: Space-separated apt packages required by the caller on Linux.
+    required: false
+    default: "build-essential lld pkg-config libssl-dev"
+  enable-cache:
+    description: Enable Kache on Linux.
+    required: false
+    default: "true"
+  require-shared-cache:
+    description: Fail unless a managed persistent Kache or hosted S3 Kache is active.
+    required: false
+    default: "false"
+  kache-version:
+    description: Official Kache release used only for ephemeral hosted runners.
+    required: false
+    default: "0.12.0"
+  s3-bucket:
+    description: S3 bucket for ephemeral hosted runners.
+    required: false
+    default: "kache"
+  s3-region:
+    description: S3 region for ephemeral hosted runners.
+    required: false
+    default: "us-east-1"
+  s3-prefix:
+    description: S3 object prefix for ephemeral hosted runners.
+    required: false
+    default: "rust"
+  s3-endpoint:
+    description: S3-compatible endpoint for ephemeral hosted runners. Callers must supply their own endpoint; there is no fleet-wide default.
+    required: true
+  s3-access-key-id:
+    description: S3 access key. Pass a masked repository or organization secret.
+    required: false
+    default: ""
+  s3-secret-access-key:
+    description: S3 secret key. Pass a masked repository or organization secret.
+    required: false
+    default: ""
+  manifest-key:
+    description: Build-shape-specific manifest key. Derived when empty.
+    required: false
+    default: ""
+  namespace:
+    description: Build-shape-specific content-addressed namespace. Defaults to the manifest key.
+    required: false
+    default: ""
+  warm:
+    description: Warm the hosted ephemeral cache from a saved manifest.
+    required: false
+    default: "false"
+  sync:
+    description: Pull the full hosted remote during setup.
+    required: false
+    default: "false"
+  pr-comment:
+    description: Allow the hosted Kache action to post a PR comment.
+    required: false
+    default: "false"
+  max-size:
+    description: Ephemeral local store cap.
+    required: false
+    default: "40GiB"
+  remote-readonly:
+    description: Suppress uploads from the ephemeral hosted daemon.
+    required: false
+    default: "false"
+
+outputs:
+  cache-mode:
+    description: managed-local, hosted-s3, or bare.
+    value: ${{ steps.mode.outputs.cache-mode }}
+  kache-binary:
+    description: Resolved Kache binary when caching is active.
+    value: ${{ steps.mode.outputs.kache-binary }}
+  cache-dir:
+    description: Resolved local Kache store when managed caching is active.
+    value: ${{ steps.mode.outputs.cache-dir }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install Linux prerequisites
+      if: runner.os == 'Linux' && inputs.linux-packages != ''
+      shell: bash
+      env:
+        LINUX_PACKAGES: ${{ inputs.linux-packages }}
+      run: |
+        set -euo pipefail
+        read -r -a packages <<<"$LINUX_PACKAGES"
+        missing=()
+        for package in "${packages[@]}"; do
+          [[ -n "$package" ]] || continue
+          dpkg-query -W -f='${db:Status-Abbrev}' "$package" 2>/dev/null | grep -q '^ii ' || missing+=("$package")
+        done
+        ((${#missing[@]})) || exit 0
+        command -v apt-get >/dev/null 2>&1 || {
+          echo "::error::missing Linux packages and apt-get is unavailable: ${missing[*]}"
+          exit 1
+        }
+        if [[ "$(id -u)" == "0" ]]; then
+          apt-get update
+          apt-get install -y "${missing[@]}"
+        elif command -v sudo >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y "${missing[@]}"
+        else
+          echo "::error::missing Linux packages and neither root nor sudo is available: ${missing[*]}"
+          exit 1
+        fi
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        components: ${{ inputs.components }}
+        targets: ${{ inputs.targets }}
+
+    - name: Ensure requested targets on active project toolchain
+      if: inputs.targets != ''
+      shell: bash
+      env:
+        REQUESTED_TARGETS: ${{ inputs.targets }}
+      run: |
+        set -euo pipefail
+        active_toolchain="$(rustup show active-toolchain | awk '{print $1}')"
+        IFS=',' read -r -a targets <<<"$REQUESTED_TARGETS"
+        for target in "${targets[@]}"; do
+          target="${target//[[:space:]]/}"
+          [[ -n "$target" ]] || continue
+          rustup target add --toolchain "$active_toolchain" "$target"
+        done
+
+    - name: Detect managed persistent Kache
+      id: managed
+      if: inputs.enable-cache == 'true' && runner.os == 'Linux'
+      shell: bash
+      run: |
+        set -euo pipefail
+        managed=false
+        binary="${KACHE_MANAGED_BINARY:-$(command -v kache || true)}"
+        cache_dir="${KACHE_MANAGED_STORE:-}"
+        if [[ -n "$binary" && -x "$binary" && -n "$cache_dir" && -S "$cache_dir/kache.sock" ]]; then
+          managed=true
+        else
+          binary=""
+          cache_dir=""
+        fi
+        {
+          echo "managed=$managed"
+          echo "binary=$binary"
+          echo "cache-dir=$cache_dir"
+        } >>"$GITHUB_OUTPUT"
+
+    - name: Reuse managed persistent Kache
+      if: inputs.enable-cache == 'true' && runner.os == 'Linux' && steps.managed.outputs.managed == 'true'
+      shell: bash
+      env:
+        KACHE_BINARY: ${{ steps.managed.outputs.binary }}
+        KACHE_STORE: ${{ steps.managed.outputs.cache-dir }}
+      run: |
+        set -euo pipefail
+        [[ -x "$KACHE_BINARY" ]]
+        [[ -S "$KACHE_STORE/kache.sock" ]]
+        {
+          echo "RUSTC_WRAPPER=$KACHE_BINARY"
+          echo "CARGO_BUILD_RUSTC_WRAPPER=$KACHE_BINARY"
+          echo "KACHE_CACHE_DIR=$KACHE_STORE"
+          echo "CARGO_INCREMENTAL=0"
+          echo "KACHE_VERIFY_RESTORES=sampled"
+        } >>"$GITHUB_ENV"
+
+    - name: Check hosted S3 credentials
+      id: credentials
+      if: inputs.enable-cache == 'true' && runner.os == 'Linux' && steps.managed.outputs.managed != 'true'
+      shell: bash
+      env:
+        S3_ACCESS_KEY_ID: ${{ inputs.s3-access-key-id }}
+        S3_SECRET_ACCESS_KEY: ${{ inputs.s3-secret-access-key }}
+      run: |
+        set -euo pipefail
+        available=false
+        if [[ -n "$S3_ACCESS_KEY_ID" && -n "$S3_SECRET_ACCESS_KEY" ]]; then
+          available=true
+        fi
+        echo "available=$available" >>"$GITHUB_OUTPUT"
+
+    - name: Check hosted tool cache writability
+      id: tool-cache
+      if: inputs.enable-cache == 'true' && runner.os == 'Linux' && steps.managed.outputs.managed != 'true' && steps.credentials.outputs.available == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        usable=false
+        root="${RUNNER_TOOL_CACHE:-}"
+        if [[ -n "$root" ]]; then
+          probe="$root/kache/.fleet-write-probe-$$"
+          if mkdir -p "$root/kache" 2>/dev/null && mkdir "$probe" 2>/dev/null; then
+            rmdir "$probe"
+            usable=true
+          fi
+        fi
+        echo "usable=$usable" >>"$GITHUB_OUTPUT"
+
+    - name: Derive hosted cache identity
+      id: identity
+      if: inputs.enable-cache == 'true' && runner.os == 'Linux' && steps.managed.outputs.managed != 'true' && steps.credentials.outputs.available == 'true' && steps.tool-cache.outputs.usable == 'true'
+      shell: bash
+      env:
+        REQUESTED_MANIFEST: ${{ inputs.manifest-key }}
+        REQUESTED_NAMESPACE: ${{ inputs.namespace }}
+        REQUESTED_TOOLCHAIN: ${{ inputs.toolchain }}
+      run: |
+        set -euo pipefail
+        manifest="$REQUESTED_MANIFEST"
+        if [[ -z "$manifest" ]]; then
+          manifest="${GITHUB_REPOSITORY}-${GITHUB_JOB}-${RUNNER_OS}-${RUNNER_ARCH}-${REQUESTED_TOOLCHAIN}"
+        fi
+        manifest="$(tr '[:upper:]/_ ' '[:lower:]---' <<<"$manifest" | tr -cd 'a-z0-9.-')"
+        namespace="$REQUESTED_NAMESPACE"
+        [[ -n "$namespace" ]] || namespace="$manifest"
+        echo "manifest-key=$manifest" >>"$GITHUB_OUTPUT"
+        echo "namespace=$namespace" >>"$GITHUB_OUTPUT"
+
+    - name: Prepare hosted Kache environment
+      if: inputs.enable-cache == 'true' && runner.os == 'Linux' && steps.managed.outputs.managed != 'true' && steps.credentials.outputs.available == 'true' && steps.tool-cache.outputs.usable == 'true'
+      shell: bash
+      env:
+        REMOTE_READONLY: ${{ inputs.remote-readonly }}
+      run: |
+        set -euo pipefail
+        {
+          echo "CARGO_INCREMENTAL=0"
+          echo "KACHE_VERIFY_RESTORES=sampled"
+        } >>"$GITHUB_ENV"
+        if [[ "$REMOTE_READONLY" == "true" ]]; then
+          echo "KACHE_REMOTE_READONLY=1" >>"$GITHUB_ENV"
+        fi
+
+    - name: Configure hosted MinIO Kache
+      if: inputs.enable-cache == 'true' && runner.os == 'Linux' && steps.managed.outputs.managed != 'true' && steps.credentials.outputs.available == 'true' && steps.tool-cache.outputs.usable == 'true'
+      uses: kunobi-ninja/kache-action@a257c055543c2840700a9bbca8f9c3094a421b1b
+      with:
+        version: ${{ inputs.kache-version }}
+        s3-bucket: ${{ inputs.s3-bucket }}
+        s3-region: ${{ inputs.s3-region }}
+        s3-prefix: ${{ inputs.s3-prefix }}
+        s3-endpoint: ${{ inputs.s3-endpoint }}
+        s3-access-key-id: ${{ inputs.s3-access-key-id }}
+        s3-secret-access-key: ${{ inputs.s3-secret-access-key }}
+        manifest-key: ${{ steps.identity.outputs.manifest-key }}
+        namespace: ${{ steps.identity.outputs.namespace }}
+        warm: ${{ inputs.warm }}
+        sync: ${{ inputs.sync }}
+        pr-comment: ${{ inputs.pr-comment }}
+        max-size: ${{ inputs.max-size }}
+
+    - name: Use bare Cargo when shared caching is unavailable
+      if: inputs.enable-cache != 'true' || runner.os != 'Linux' || (steps.managed.outputs.managed != 'true' && (steps.credentials.outputs.available != 'true' || steps.tool-cache.outputs.usable != 'true'))
+      shell: bash
+      run: |
+        {
+          echo "RUSTC_WRAPPER="
+          echo "CARGO_BUILD_RUSTC_WRAPPER="
+        } >>"$GITHUB_ENV"
+
+    - name: Report resolved cache mode
+      id: mode
+      if: always()
+      shell: bash
+      env:
+        MANAGED: ${{ steps.managed.outputs.managed }}
+        MANAGED_BINARY: ${{ steps.managed.outputs.binary }}
+        MANAGED_CACHE_DIR: ${{ steps.managed.outputs.cache-dir }}
+        HOSTED_AVAILABLE: ${{ steps.credentials.outputs.available }}
+        HOSTED_USABLE: ${{ steps.tool-cache.outputs.usable }}
+        ENABLE_CACHE: ${{ inputs.enable-cache }}
+        REQUIRE_SHARED_CACHE: ${{ inputs.require-shared-cache }}
+      run: |
+        set -euo pipefail
+        mode="bare"
+        binary=""
+        cache_dir=""
+        if [[ "$ENABLE_CACHE" == "true" && "$RUNNER_OS" == "Linux" ]]; then
+          if [[ "$MANAGED" == "true" ]]; then
+            mode="managed-local"
+            binary="$MANAGED_BINARY"
+            cache_dir="$MANAGED_CACHE_DIR"
+          elif [[ "$HOSTED_AVAILABLE" == "true" && "$HOSTED_USABLE" == "true" ]]; then
+            mode="hosted-s3"
+            binary="$(command -v kache || true)"
+          fi
+        fi
+        if [[ "$REQUIRE_SHARED_CACHE" == "true" && "$mode" != "managed-local" && "$mode" != "hosted-s3" ]]; then
+          echo "::error::require-shared-cache is true but no shared Kache cache is active (resolved mode=$mode)"
+          exit 1
+        fi
+        {
+          echo "cache-mode=$mode"
+          echo "kache-binary=$binary"
+          echo "cache-dir=$cache_dir"
+        } >>"$GITHUB_OUTPUT"

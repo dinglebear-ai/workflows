@@ -67,6 +67,11 @@ jobs:
           toolchain: ${{ inputs.toolchain }}
           components: rustfmt, clippy
           enable-cache: "true"
+          # This runner pool always resolves the managed-local (NFS) cache
+          # path, so the hosted-S3 branch never executes and s3-endpoint is
+          # unused here. Passed explicitly (empty) because the action no
+          # longer carries a fleet-wide default endpoint.
+          s3-endpoint: ""
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         if: inputs.uv-version != ''
         with:
