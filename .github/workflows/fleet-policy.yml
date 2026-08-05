@@ -37,6 +37,8 @@ jobs:
           import os, pathlib, re, sys, yaml
 
           root = pathlib.Path(".github/workflows")
+          needs_output = re.compile(r"needs\.([A-Za-z0-9_-]+)\.outputs\.([A-Za-z_][A-Za-z0-9_-]*)")
+          needs_result = re.compile(r"needs\.([A-Za-z0-9_-]+)\.result")
           release_re = re.compile(os.environ["RELEASE_FILE_REGEX"])
           allow_hosted_fast = os.environ["ALLOW_HOSTED_FAST"].lower() == "true"
           sha = re.compile(r"^[0-9a-f]{40}$")
@@ -83,6 +85,38 @@ jobs:
                       errors.append(f"{path}:{name}: scale-set selector must not include self-hosted")
                   elif self_hosted:
                       errors.append(f"{path}:{name}: farm job has no pool selector")
+
+                  # An aggregate gate (`if: always()` plus result inspection)
+                  # must inspect every job it waits on. A job listed in `needs:`
+                  # whose result is never read cannot fail the gate, so its
+                  # failure or skip passes the required check silently.
+                  if "always()" in str(job.get("if", "")) and needs_result.search(str(job)):
+                      body = str(job)
+                      inspected = set(needs_result.findall(body))
+                      consumed = {producer for producer, _ in needs_output.findall(body)}
+                      needs = job.get("needs") or []
+                      if isinstance(needs, str):
+                          needs = [needs]
+                      for dependency in needs:
+                          if dependency not in inspected and dependency not in consumed:
+                              errors.append(
+                                  f"{path}:{name}: aggregate gate needs `{dependency}` but never reads"
+                                  f" needs.{dependency}.result; that job cannot fail the gate"
+                              )
+
+              # A gate on an output the producing job does not declare always
+              # evaluates to the empty string, so `== 'true'` is false and the
+              # gated job skips for reasons no one intended. Reusable-workflow
+              # jobs are exempt: their outputs live in the called workflow.
+              for producer, key in sorted(set(needs_output.findall(text))):
+                  job = jobs.get(producer)
+                  if not isinstance(job, dict) or "uses" in job:
+                      continue
+                  if key not in (job.get("outputs") or {}):
+                      errors.append(
+                          f"{path}: needs.{producer}.outputs.{key} is never declared by job"
+                          f" `{producer}`; that expression always reads as an empty string"
+                      )
 
           if errors:
               print("\n".join(f"::error::{e}" for e in errors))
