@@ -62,7 +62,7 @@ pure-Rust callers free of Python tooling.
 | `fast-pnpm.yml` | fast | TypeScript | Locked pnpm audit, lint, typecheck, tests, contracts |
 | `fast-python.yml` | fast | Python | Frozen uv sync, Ruff lint/format, ty typecheck, Pytest |
 | `fast-rust.yml` | fast | Rust | Optional project setup, fmt, check, Clippy, targeted tests, MinIO kache |
-| `fleet-policy.yml` | fast | Policy | Runner, action, permission, timeout, architecture, release policy |
+| `fleet-policy.yml` | fast | Policy | Runner, action, permission, timeout, architecture, release policy, and gate wiring (no job may skip a required check silently) |
 | `github-release.yml` | release | Release | Attest and attach exact artifacts to an existing release |
 | `hosted-android-release.yml` | release | Android | Hosted release lint, tests, assembly, device evidence |
 | `hosted-bun-web-release.yml` | release | TypeScript | Bun coverage, production build, performance, E2E |
