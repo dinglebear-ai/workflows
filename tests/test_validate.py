@@ -183,7 +183,7 @@ class WorkflowLibraryTests(unittest.TestCase):
         self.assertIn("uses: ./.github/actions/setup-rust-kache", text)
         self.assertIn('enable-cache: "true"', text)
         self.assertNotIn("kunobi-ninja/kache-action", text)
-        self.assertNotIn("s3.tootie.tv", text)
+        self.assertNotIn("s3.example.internal", text)
 
     def test_fast_rust_supports_optional_project_setup(self) -> None:
         workflow = yaml.load(

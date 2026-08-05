@@ -47,12 +47,12 @@ dependencies.
 
 The private Linux fleet uses one Kache topology across repositories:
 
-- Each Tootie runner owns an isolated 80 GiB local L1 store. Dookie owns a
+- Each Nashost runner owns an isolated 80 GiB local L1 store. Devhost owns a
   separate 100 GiB local L1 store.
 - The only shared remote is the MinIO S3 prefix `s3://kache/rust`.
 - The retired NFS cache is not mounted, mirrored, or retained as a fallback.
 - Runners preserve the host-provided Kache configuration and run one supervised
-  daemon. Dookie runs one user-systemd-owned daemon.
+  daemon. Devhost runs one user-systemd-owned daemon.
 - Jobs without the private S3 profile remain local-only. They must not invent a
   filesystem remote or overwrite an existing host configuration.
 

@@ -143,7 +143,7 @@ its labels are unavailable.
 ## Kache and MinIO
 
 Rust workflows use private local kache stores with the shared S3-compatible
-remote at `https://s3.tootie.tv`, bucket `kache`.
+remote at `https://s3.example.internal`, bucket `kache`.
 
 Required organization secrets:
 

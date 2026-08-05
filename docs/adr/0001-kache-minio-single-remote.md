@@ -28,8 +28,8 @@ filesystem reaper, and leave cache correctness dependent on mount availability.
 
 The fleet uses one shared Kache remote: `s3://kache/rust` on MinIO.
 
-1. Each Tootie runner owns an isolated 80 GiB local L1 store.
-2. Dookie owns an isolated 100 GiB local L1 store.
+1. Each Nashost runner owns an isolated 80 GiB local L1 store.
+2. Devhost owns an isolated 100 GiB local L1 store.
 3. Local SQLite-backed stores are never shared between runners or hosts.
 4. The NFS cache is not mounted, mirrored, dual-written, or used as a fallback.
 5. Private runners preserve the host-provided S3 configuration and credential
@@ -52,10 +52,10 @@ The fleet uses one shared Kache remote: `s3://kache/rust` on MinIO.
 
 ## Verification
 
-The migration evidence is retained on Tootie under
+The migration evidence is retained on Nashost under
 `/mnt/user/logs/kache-migration-20260803`. The retirement gate required:
 
 - zero source-only objects;
 - classification and archival of all 32 mutable manifest differences;
 - a zero-byte archive diff;
-- removal of the NFS source tree and Dookie mount only after those checks.
+- removal of the NFS source tree and Devhost mount only after those checks.

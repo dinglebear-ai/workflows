@@ -52,7 +52,7 @@ publication uses DNS ownership for the `ai.dinglebear/*` namespace.
 DingleBear MCP Registry callers use DNS ownership with the repository secret
 `MCP_PRIVATE_KEY`. The reusable workflow requires the manifest namespace
 `ai.dinglebear`, DNS proof `dinglebear.ai`, and a `dinglebear-ai` repository URL
-before the private key is read. Runtime service domains such as `tootie.tv` are
+before the private key is read. Runtime service domains such as `example.internal` are
 never valid publisher identities.
 
 The release graph validates one artifact or digest and promotes those exact
