@@ -59,9 +59,10 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      # ci-pool-rust is the private Ubuntu 26.04 fleet. Its canonical remote
-      # is the bind-mounted NFS cache, not hosted MinIO. The caller repository
-      # owns this composite action and its fleet-pinned Kache contract.
+      # ci-pool-rust is the private Ubuntu 26.04 fleet. Its canonical shared
+      # remote is MinIO at s3://kache/rust. The caller repository owns this
+      # composite action and its fleet-pinned Kache contract; when private S3
+      # credentials are absent, the action remains local-only.
       - uses: ./.github/actions/setup-rust-kache
         with:
           toolchain: ${{ inputs.toolchain }}
