@@ -248,3 +248,7 @@ or self-hosted release jobs.
 - [MCP Registry GitHub Actions guide](https://github.com/modelcontextprotocol/registry/blob/main/docs/modelcontextprotocol-io/github-actions.mdx)
 - [Official MCP conformance suite](https://github.com/modelcontextprotocol/conformance)
 - [Cargo publishing](https://doc.rust-lang.org/cargo/reference/publishing.html)
+
+## License
+
+Original Dinglebear-authored portions of this project are licensed under [AGPL-3.0-only](LICENSE). Separate commercial licensing is available for organizations that need terms outside the AGPL. Third-party material remains under its original license. See [LICENSING.md](LICENSING.md).
