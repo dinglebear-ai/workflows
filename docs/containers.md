@@ -63,7 +63,7 @@ runner farm to mount the appropriate cache paths:
 | TypeScript | `/root/.npm`, `/root/.local/share/pnpm/store`, `/root/.bun/install/cache` |
 
 Kache's local database/store remains private to a compatible runner. Only its
-S3 content-addressed remote is shared across dookie, the farm, and hosted
+S3 content-addressed remote is shared across devhost, the farm, and hosted
 release builders.
 
 ## Build and test locally
