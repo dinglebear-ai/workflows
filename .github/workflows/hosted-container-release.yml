@@ -83,7 +83,7 @@ jobs:
           IMAGE_REF: ${{ inputs.image }}@${{ steps.build.outputs.digest }}
         run: bash -euo pipefail -c "$COMMAND"
       - name: Scan exact digest
-        uses: aquasecurity/trivy-action@c07df6fec6fa692e6fd1200d50aaa1fdd66f03c8
+        uses: aquasecurity/trivy-action@2736533278103862a861f4a35ebac3e97854d956
         with:
           image-ref: ${{ inputs.image }}@${{ steps.build.outputs.digest }}
           format: table
