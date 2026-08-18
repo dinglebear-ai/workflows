@@ -116,6 +116,62 @@ class GateWiringPolicyTests(unittest.TestCase):
         result = run_policy({"ci.yml": called})
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_fast_job_without_pool_selector_fails(self) -> None:
+        broken = CLEAN_WORKFLOW.replace("runs-on: ci-pool-ops", "runs-on: ubuntu-latest", 1)
+        result = run_policy({"ci.yml": broken})
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("fast job must use exactly one ci-pool-* selector", result.stdout)
+
+    def test_reusable_runner_override_must_be_one_pool(self) -> None:
+        called = """
+        name: caller
+        permissions:
+          contents: read
+        jobs:
+          codeql:
+            uses: dinglebear-ai/workflows/.github/workflows/codeql.yml@0123456789abcdef0123456789abcdef01234567
+            with:
+              runner-labels-json: '["self-hosted", "ci-pool-rust"]'
+        """
+        result = run_policy({"ci.yml": called})
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("runner-labels-json must encode exactly one ci-pool-* selector", result.stdout)
+
+    def test_pool_selector_may_include_capability_labels(self) -> None:
+        capable = CLEAN_WORKFLOW.replace(
+            "runs-on: ci-pool-ops",
+            "runs-on: [ci-pool-ops, ci-cap-docker]",
+        )
+        result = run_policy({"ci.yml": capable})
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_untrusted_github_context_in_run_fails(self) -> None:
+        broken = CLEAN_WORKFLOW.replace(
+            '- run: echo building',
+            '- run: echo "${{ github.ref_name }}"',
+        )
+        result = run_policy({"ci.yml": broken})
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("untrusted context expression interpolated directly into run", result.stdout)
+
+    def test_permissions_shorthand_fails(self) -> None:
+        broken = CLEAN_WORKFLOW.replace(
+            "permissions:\n  contents: read",
+            "permissions: write-all",
+        )
+        result = run_policy({"ci.yml": broken})
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("top-level permissions must be an explicit mapping", result.stdout)
+
+    def test_container_action_requires_full_digest(self) -> None:
+        broken = CLEAN_WORKFLOW.replace(
+            '- run: echo building',
+            '- uses: docker://alpine@sha256:deadbeef',
+        )
+        result = run_policy({"ci.yml": broken})
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("mutable container action", result.stdout)
+
     def test_aggregate_that_ignores_a_dependency_fails(self) -> None:
         # `web` stays in `needs:` but its result is no longer inspected, so the
         # gate passes whatever `web` concludes.

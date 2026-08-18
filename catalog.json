@@ -117,7 +117,7 @@
     {"file": "pages-deploy.yml", "kind": "deployment", "category": "typescript", "summary": "Build and deploy GitHub Pages with split permissions."},
     {"file": "python-security.yml", "kind": "fast", "category": "python", "summary": "Audit a frozen Python dependency export."},
     {"file": "publish-ci-images.yml", "kind": "internal", "category": "container", "summary": "Publish canonical CI images only from a GitHub release."},
-    {"file": "release-please.yml", "kind": "fast", "category": "release", "summary": "Serialize Release Please and emit immutable release identity."},
+    {"file": "release-please.yml", "kind": "release", "category": "release", "summary": "Serialize Release Please and emit immutable release identity."},
     {"file": "repository-labeler.yml", "kind": "fast", "category": "automation", "summary": "Apply pull-request labels from repository-owned path rules."},
     {"file": "repository-policy.yml", "kind": "fast", "category": "policy", "summary": "Enforce required files, agent-memory symlinks, and tracked file size."},
     {"file": "rust-docs.yml", "kind": "fast", "category": "rust", "summary": "Build workspace Rust documentation with warnings denied."},

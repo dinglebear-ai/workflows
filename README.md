@@ -131,10 +131,10 @@ Scheduling pools:
 | `ci-pool-ops` | tiny shell, YAML, policy, metadata, synthetics |
 | `ci-pool-jvm` | optional fast Gradle/debug Android lane |
 | `ci-pool-system` | privileged OS/kernel/service integration |
+| `ci-pool-residential-egress` | residential-egress synthetic checks |
 
-Capability labels supplement a pool and never replace it:
-`residential-egress`, `ci-cap-zfs`, `ci-cap-docker`, `ci-cap-kvm`, and
-`ci-cap-gpu`.
+Capability labels supplement a pool and never replace it: `ci-cap-zfs`,
+`ci-cap-docker`, `ci-cap-kvm`, and `ci-cap-gpu`.
 
 The workflow library validates itself on GitHub-hosted Linux as an explicit
 control-plane exception. It must remain repairable when the self-hosted farm or
@@ -236,10 +236,7 @@ shellcheck install.sh scripts/*.sh images/smoke.sh
 ./scripts/test-images.sh
 ```
 
-The validator fails on uncatalogued workflows, mutable actions, missing
-permissions/timeouts, unsafe checkout credentials, direct event/input
-interpolation into shell, forbidden architecture contracts, fast hosted jobs,
-or self-hosted release jobs.
+The validator fails on uncatalogued workflows, mutable actions or reusable-workflow references, malformed container digests, non-mapping permissions, missing timeouts, unsafe checkout credentials, direct `inputs.*`, `github.*`, or `secrets.*` interpolation into shell, forbidden architecture contracts, fast jobs without an approved `ci-pool-*` selector, or self-hosted release jobs. Dynamic CodeQL routing is accepted only through the declared `runner-labels-json` input with a safe pool default; fleet policy validates caller overrides.
 
 ## Upstream references
 

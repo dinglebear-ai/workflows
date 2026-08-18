@@ -1,7 +1,7 @@
 ---
 title: Workflow catalog
 created: 2026-07-30
-updated: 2026-07-30
+updated: 2026-08-18
 ---
 
 # Workflow catalog
@@ -62,6 +62,7 @@ pure-Rust callers free of Python tooling.
 | `fast-pnpm.yml` | fast | TypeScript | Locked pnpm audit, lint, typecheck, tests, contracts |
 | `fast-python.yml` | fast | Python | Frozen uv sync, Ruff lint/format, ty typecheck, Pytest |
 | `fast-rust.yml` | fast | Rust | Optional project setup, fmt, check, Clippy, targeted tests, MinIO kache |
+| `fleet-contract.yml` | fast | Policy | Durable repository, metadata, toolchain, documentation, and hygiene contract |
 | `fleet-policy.yml` | fast | Policy | Runner, action, permission, timeout, architecture, release policy, and gate wiring (no job may skip a required check silently) |
 | `github-release.yml` | release | Release | Attest and attach exact artifacts to an existing release |
 | `hosted-android-release.yml` | release | Android | Hosted release lint, tests, assembly, device evidence |
@@ -83,7 +84,7 @@ pure-Rust callers free of Python tooling.
 | `npm-trusted-publish.yml` | release | TypeScript | Pack, verify, and OIDC-publish exact npm tarball, including dependency-free packages without lockfiles |
 | `pages-deploy.yml` | deployment | TypeScript | Build and deploy Pages with split permissions |
 | `python-security.yml` | fast | Python | Audit a frozen dependency export |
-| `release-please.yml` | fast | Release | Serialize Release Please and emit release identity |
+| `release-please.yml` | release | Release | Run privileged release orchestration on clean hosted Linux and emit immutable release identity |
 | `repository-labeler.yml` | fast | Automation | Apply labels from caller-owned path rules |
 | `repository-policy.yml` | fast | Policy | Required files, memory symlinks, tracked file size |
 | `rust-docs.yml` | fast | Rust | Workspace rustdoc with warnings denied |

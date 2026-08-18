@@ -34,7 +34,7 @@ jobs:
           ALLOW_HOSTED_FAST: ${{ inputs.allow-hosted-fast }}
         run: |
           python - <<'PY'
-          import os, pathlib, re, sys, yaml
+          import json, os, pathlib, re, sys, yaml
 
           root = pathlib.Path(".github/workflows")
           needs_output = re.compile(r"needs\.([A-Za-z0-9_-]+)\.outputs\.([A-Za-z_][A-Za-z0-9_-]*)")
@@ -42,7 +42,34 @@ jobs:
           release_re = re.compile(os.environ["RELEASE_FILE_REGEX"])
           allow_hosted_fast = os.environ["ALLOW_HOSTED_FAST"].lower() == "true"
           sha = re.compile(r"^[0-9a-f]{40}$")
+          docker_sha256 = re.compile(r"^docker://[^\s]+@sha256:[0-9a-f]{64}$")
           errors = []
+
+          def iter_steps(value):
+              if isinstance(value, dict):
+                  for key, child in value.items():
+                      if key == "steps" and isinstance(child, list):
+                          yield from child
+                      yield from iter_steps(child)
+              elif isinstance(value, list):
+                  for child in value:
+                      yield from iter_steps(child)
+
+          def valid_pool_selector(value):
+              labels = [value] if isinstance(value, str) else value
+              if not isinstance(labels, list) or not labels:
+                  return False
+              expression_prefix = "$" + "{{"
+              if not all(isinstance(label, str) and expression_prefix not in label for label in labels):
+                  return False
+              pools = [label for label in labels if label.startswith("ci-pool-")]
+              return (
+                  len(pools) == 1
+                  and all(
+                      label.startswith("ci-pool-") or label.startswith("ci-cap-")
+                      for label in labels
+                  )
+              )
 
           for path in sorted((*root.glob("*.yml"), *root.glob("*.yaml"))):
               if path.name == "fleet-policy.yml":
@@ -53,15 +80,27 @@ jobs:
 
               if "permissions" not in data:
                   errors.append(f"{path}: missing top-level permissions")
+              elif not isinstance(data["permissions"], dict):
+                  errors.append(f"{path}: top-level permissions must be an explicit mapping")
               if re.search(r"(?i)\b(arm64|aarch64|linux/arm64|setup-qemu)\b", text):
                   errors.append(f"{path}: ARM/QEMU contract is forbidden")
 
-              for match in re.finditer(r"(?m)^\s*uses:\s*([^#\s]+)", text):
-                  use = match.group(1)
-                  if use.startswith("./"):
+              for step in iter_steps(data):
+                  if not isinstance(step, dict):
+                      continue
+                  run = step.get("run")
+                  if isinstance(run, str) and any(
+                      marker in run
+                      for marker in ("$" + "{{ inputs.", "$" + "{{ github.", "$" + "{{ secrets.")
+                  ):
+                      errors.append(
+                          f"{path}: untrusted context expression interpolated directly into run"
+                      )
+                  use = step.get("uses")
+                  if not isinstance(use, str) or use.startswith("./"):
                       continue
                   if use.startswith("docker://"):
-                      if "@sha256:" not in use:
+                      if not docker_sha256.fullmatch(use):
                           errors.append(f"{path}: mutable container action {use}")
                       continue
                   if "@" not in use or not sha.fullmatch(use.rsplit("@", 1)[1]):
@@ -69,18 +108,44 @@ jobs:
 
               jobs = data.get("jobs", {})
               for name, job in jobs.items():
-                  if not isinstance(job, dict) or "uses" in job:
+                  if not isinstance(job, dict):
                       continue
+
+                  permissions = job.get("permissions")
+                  if permissions is not None and not isinstance(permissions, dict):
+                      errors.append(f"{path}:{name}: permissions must be an explicit mapping")
+
+                  if "uses" in job:
+                      use = job.get("uses")
+                      if isinstance(use, str) and not use.startswith("./") and (
+                          "@" not in use or not sha.fullmatch(use.rsplit("@", 1)[1])
+                      ):
+                          errors.append(f"{path}:{name}: mutable reusable workflow {use}")
+                      with_block = job.get("with") or {}
+                      if isinstance(with_block, dict) and "runner-labels-json" in with_block:
+                          raw_label = with_block["runner-labels-json"]
+                          try:
+                              label = json.loads(raw_label) if isinstance(raw_label, str) else None
+                          except json.JSONDecodeError:
+                              label = None
+                          if not valid_pool_selector(label):
+                              errors.append(
+                                  f"{path}:{name}: runner-labels-json must encode exactly one ci-pool-* selector and optional ci-cap-* labels"
+                              )
+                      continue
+
                   if "timeout-minutes" not in job:
                       errors.append(f"{path}:{name}: missing timeout-minutes")
-                  runner = str(job.get("runs-on", ""))
-                  hosted_linux = "ubuntu-" in runner
+                  runs_on = job.get("runs-on", "")
+                  runner = str(runs_on)
                   self_hosted = "self-hosted" in runner
                   farm_routed = "ci-pool-" in runner
                   if is_release and (self_hosted or farm_routed):
                       errors.append(f"{path}:{name}: heavy release job is farm-routed")
-                  if not is_release and hosted_linux and not allow_hosted_fast:
-                      errors.append(f"{path}:{name}: fast Linux job is GitHub-hosted")
+                  if not is_release and not allow_hosted_fast and not valid_pool_selector(runs_on):
+                      errors.append(
+                          f"{path}:{name}: fast job must use exactly one ci-pool-* selector and optional ci-cap-* labels"
+                      )
                   if self_hosted and farm_routed:
                       errors.append(f"{path}:{name}: scale-set selector must not include self-hosted")
                   elif self_hosted:

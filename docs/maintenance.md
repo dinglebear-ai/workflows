@@ -1,7 +1,7 @@
 ---
 title: Maintaining the workflow library
 created: 2026-07-30
-updated: 2026-07-30
+updated: 2026-08-18
 ---
 
 # Maintaining the workflow library
@@ -20,9 +20,10 @@ updated: 2026-07-30
    shellcheck install.sh scripts/*.sh images/smoke.sh
    ```
 
-4. Build/test affected CI images when toolchain files change.
-5. Merge only after the hosted `validate` check succeeds.
-6. Let Release Please create an immutable release.
+4. Treat `scripts/validate.py` and `fleet-policy.yml` as mirrored trust-boundary enforcement: changes to action pinning, permissions, runner routing, container digests, or shell-expression safety must update both surfaces and their regression tests.
+5. Build/test affected CI images when toolchain files change.
+6. Merge only after the hosted `validate` check succeeds.
+7. Let Release Please create an immutable release.
 
 ## Caller upgrades
 
