@@ -236,7 +236,7 @@ shellcheck install.sh scripts/*.sh images/smoke.sh
 ./scripts/test-images.sh
 ```
 
-The validator fails on uncatalogued workflows, mutable actions or reusable-workflow references, malformed container digests, non-mapping permissions, missing timeouts, unsafe checkout credentials, direct event/input interpolation into shell, forbidden architecture contracts, fast jobs without an approved `ci-pool-*` selector, or self-hosted release jobs. Dynamic CodeQL routing is accepted only through the declared `runner-labels-json` input with a safe pool default; fleet policy validates caller overrides.
+The validator fails on uncatalogued workflows, mutable actions or reusable-workflow references, malformed container digests, non-mapping permissions, missing timeouts, unsafe checkout credentials, direct `inputs.*`, `github.*`, or `secrets.*` interpolation into shell, forbidden architecture contracts, fast jobs without an approved `ci-pool-*` selector, or self-hosted release jobs. Dynamic CodeQL routing is accepted only through the declared `runner-labels-json` input with a safe pool default; fleet policy validates caller overrides.
 
 ## Upstream references
 

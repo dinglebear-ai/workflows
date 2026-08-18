@@ -145,6 +145,15 @@ class GateWiringPolicyTests(unittest.TestCase):
         result = run_policy({"ci.yml": capable})
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_untrusted_github_context_in_run_fails(self) -> None:
+        broken = CLEAN_WORKFLOW.replace(
+            '- run: echo building',
+            '- run: echo "${{ github.ref_name }}"',
+        )
+        result = run_policy({"ci.yml": broken})
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("untrusted context expression interpolated directly into run", result.stdout)
+
     def test_permissions_shorthand_fails(self) -> None:
         broken = CLEAN_WORKFLOW.replace(
             "permissions:\n  contents: read",

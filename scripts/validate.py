@@ -182,11 +182,12 @@ def validate() -> list[str]:
                         f"{path.name}: checkout must set persist-credentials false"
                     )
             run = step.get("run")
-            if isinstance(run, str) and (
-                "${{ inputs." in run or "${{ github.event." in run
+            if isinstance(run, str) and any(
+                marker in run
+                for marker in ("${{ inputs.", "${{ github.", "${{ secrets.")
             ):
                 errors.append(
-                    f"{path.name}: event/input expression interpolated directly into run"
+                    f"{path.name}: untrusted context expression interpolated directly into run"
                 )
 
     return errors

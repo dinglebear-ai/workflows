@@ -88,6 +88,14 @@ jobs:
               for step in iter_steps(data):
                   if not isinstance(step, dict):
                       continue
+                  run = step.get("run")
+                  if isinstance(run, str) and any(
+                      marker in run
+                      for marker in ("$" + "{{ inputs.", "$" + "{{ github.", "$" + "{{ secrets.")
+                  ):
+                      errors.append(
+                          f"{path}: untrusted context expression interpolated directly into run"
+                      )
                   use = step.get("uses")
                   if not isinstance(use, str) or use.startswith("./"):
                       continue

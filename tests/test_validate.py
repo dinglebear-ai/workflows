@@ -412,6 +412,15 @@ class ValidatorRegressionTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout)
         self.assertIn("permissions must be an explicit mapping", result.stdout)
 
+    def test_untrusted_github_context_must_not_be_interpolated_into_run(self) -> None:
+        broken = self.BASE.replace(
+            '- run: "true"',
+            '- run: echo "${{ github.ref_name }}"',
+        )
+        result = run_validator_fixture(broken)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("untrusted context expression interpolated directly into run", result.stdout)
+
     def test_container_action_requires_full_sha256_digest(self) -> None:
         broken = self.BASE.replace(
             '- run: "true"',
