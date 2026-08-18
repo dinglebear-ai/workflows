@@ -8,7 +8,6 @@ self-hosted-runner:
     - ci-pool-jvm
     - ci-pool-system
     - ci-pool-residential-egress
-    - residential-egress
     - ci-cap-zfs
     - ci-cap-docker
     - ci-cap-kvm

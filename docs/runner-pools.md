@@ -1,7 +1,7 @@
 ---
 title: Runner pools
 created: 2026-07-30
-updated: 2026-07-30
+updated: 2026-08-18
 ---
 
 # Runner pools
@@ -18,10 +18,10 @@ additional constraints, not substitutes for a pool.
 | `ci-pool-ops` | YAML/shell/policy, metadata, labeler, stale, drift, lightweight synthetics |
 | `ci-pool-jvm` | Optional fast Gradle/debug Android work when dedicated capacity exists |
 | `ci-pool-system` | Privileged OS, service, kernel, ZFS, KVM, or nested-runtime integration |
+| `ci-pool-residential-egress` | Residential-egress synthetic checks |
 
 Capabilities currently modeled:
 
-- `residential-egress`
 - `ci-cap-zfs`
 - `ci-cap-docker`
 - `ci-cap-kvm`

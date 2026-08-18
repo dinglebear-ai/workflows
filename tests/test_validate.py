@@ -2,14 +2,43 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
+import shutil
 import subprocess
+import sys
 import tempfile
+import textwrap
 import unittest
 
 import yaml
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+def run_validator_fixture(workflow: str, *, kind: str = "fast") -> subprocess.CompletedProcess[str]:
+    with tempfile.TemporaryDirectory() as temp:
+        root = pathlib.Path(temp)
+        scripts = root / "scripts"
+        workflows = root / ".github" / "workflows"
+        scripts.mkdir(parents=True)
+        workflows.mkdir(parents=True)
+        shutil.copy(ROOT / "scripts" / "validate.py", scripts / "validate.py")
+        (workflows / "fixture.yml").write_text(textwrap.dedent(workflow).lstrip())
+        (root / "catalog.json").write_text(
+            json.dumps(
+                {
+                    "workflows": [{"file": "fixture.yml", "kind": kind}],
+                    "profiles": {"fixture": ["fixture.yml"]},
+                }
+            )
+        )
+        return subprocess.run(
+            [sys.executable, str(scripts / "validate.py")],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
 
 
 class WorkflowLibraryTests(unittest.TestCase):
@@ -19,6 +48,28 @@ class WorkflowLibraryTests(unittest.TestCase):
         for name, workflows in catalog["profiles"].items():
             with self.subTest(profile=name):
                 self.assertTrue(workflows)
+
+    def test_local_documentation_links_resolve(self) -> None:
+        files = [ROOT / "README.md", *sorted((ROOT / "docs").glob("**/*.md"))]
+        link_pattern = re.compile(r"\[[^]]*\]\(([^)]+)\)")
+        for path in files:
+            for target in link_pattern.findall(path.read_text()):
+                if target.startswith(("http://", "https://", "mailto:", "#", "<")):
+                    continue
+                target_path = target.split("#", 1)[0].split("?", 1)[0]
+                if not target_path:
+                    continue
+                with self.subTest(document=path.relative_to(ROOT), target=target):
+                    self.assertTrue((path.parent / target_path).resolve().exists())
+
+    def test_documented_catalog_covers_every_reusable_workflow(self) -> None:
+        catalog = json.loads((ROOT / "catalog.json").read_text())
+        documented = (ROOT / "docs/workflow-catalog.md").read_text()
+        for item in catalog["workflows"]:
+            if item["kind"] == "internal":
+                continue
+            with self.subTest(workflow=item["file"]):
+                self.assertIn("| `" + item["file"] + "` |", documented)
 
     def test_reusable_workflows_have_inputs_mapping(self) -> None:
         catalog = json.loads((ROOT / "catalog.json").read_text())
@@ -88,6 +139,18 @@ class WorkflowLibraryTests(unittest.TestCase):
                 )
                 self.assertRegex(first_from, r"@sha256:[0-9a-f]{64}$")
                 self.assertIn("ci-image-smoke", dockerfile)
+
+    def test_kache_version_is_consistent_across_rust_surfaces(self) -> None:
+        dockerfile = (ROOT / "images/rust/Dockerfile").read_text()
+        self.assertIn("ARG KACHE_VERSION=0.13.0", dockerfile)
+        for workflow_name in (
+            "hosted-incus-image.yml",
+            "hosted-kache-canary.yml",
+            "hosted-rust-release.yml",
+        ):
+            text = (ROOT / ".github/workflows" / workflow_name).read_text()
+            with self.subTest(workflow=workflow_name):
+                self.assertIn('version: "0.13.0"', text)
 
     def test_python_contract_uses_uv_ruff_ty_and_pytest(self) -> None:
         workflow = (ROOT / ".github/workflows/fast-python.yml").read_text()
@@ -278,8 +341,95 @@ class WorkflowLibraryTests(unittest.TestCase):
                 self.assertTrue((target / "GEMINI.md").is_symlink())
 
 
-if __name__ == "__main__":
-    unittest.main()
+class ValidatorRegressionTests(unittest.TestCase):
+    BASE = """
+    name: fixture
+    on:
+      workflow_call:
+    permissions:
+      contents: read
+    jobs:
+      validate:
+        runs-on: ci-pool-test
+        timeout-minutes: 5
+        steps:
+          - run: "true"
+    """
+
+    def test_minimal_fast_workflow_passes(self) -> None:
+        result = run_validator_fixture(self.BASE)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_fast_workflow_requires_single_scale_set_selector(self) -> None:
+        broken = self.BASE.replace(
+            "runs-on: ci-pool-test",
+            "runs-on: [self-hosted, ci-pool-test]",
+        )
+        result = run_validator_fixture(broken)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("must use exactly one ci-pool-* selector", result.stdout)
+
+    def test_fast_workflow_allows_pool_with_capability_label(self) -> None:
+        capable = self.BASE.replace(
+            "runs-on: ci-pool-test",
+            "runs-on: [ci-pool-test, ci-cap-docker]",
+        )
+        result = run_validator_fixture(capable)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_fast_workflow_allows_safe_routed_pool_input(self) -> None:
+        routed = self.BASE.replace(
+            "on:\n      workflow_call:",
+            "on:\n      workflow_call:\n        inputs:\n          runner-labels-json:\n            type: string\n            default: \'\"ci-pool-test\"\'",
+        ).replace("runs-on: ci-pool-test", "runs-on: ${{ fromJSON(inputs.runner-labels-json) }}")
+        result = run_validator_fixture(routed)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_fast_workflow_rejects_unsafe_routed_pool_default(self) -> None:
+        routed = self.BASE.replace(
+            "on:\n      workflow_call:",
+            "on:\n      workflow_call:\n        inputs:\n          runner-labels-json:\n            type: string\n            default: \'\"ubuntu-latest\"\'",
+        ).replace("runs-on: ci-pool-test", "runs-on: ${{ fromJSON(inputs.runner-labels-json) }}")
+        result = run_validator_fixture(routed)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("must use exactly one ci-pool-* selector", result.stdout)
+
+    def test_external_reusable_workflow_requires_full_sha(self) -> None:
+        broken = self.BASE.replace(
+            "runs-on: ci-pool-test\n        timeout-minutes: 5\n        steps:\n          - run: \"true\"",
+            "uses: example/repo/.github/workflows/ci.yml@main",
+        )
+        result = run_validator_fixture(broken)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("mutable reusable workflow", result.stdout)
+
+    def test_reusable_workflow_permissions_must_be_mapping(self) -> None:
+        broken = self.BASE.replace(
+            "runs-on: ci-pool-test\n        timeout-minutes: 5\n        steps:\n          - run: \"true\"",
+            "permissions: write-all\n        uses: example/repo/.github/workflows/ci.yml@0123456789abcdef0123456789abcdef01234567",
+        )
+        result = run_validator_fixture(broken)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("permissions must be an explicit mapping", result.stdout)
+
+    def test_container_action_requires_full_sha256_digest(self) -> None:
+        broken = self.BASE.replace(
+            '- run: "true"',
+            "- uses: docker://alpine@sha256:deadbeef",
+        )
+        result = run_validator_fixture(broken)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("mutable container action", result.stdout)
+
+    def test_permissions_shorthand_is_rejected(self) -> None:
+        broken = self.BASE.replace(
+            "permissions:\n      contents: read",
+            "permissions: write-all",
+        )
+        result = run_validator_fixture(broken)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("permissions must be an explicit mapping", result.stdout)
+
 
 class McpRegistryWorkflowTests(unittest.TestCase):
     def test_mcp_registry_workflow_is_canonical_and_idempotent(self) -> None:
@@ -316,3 +466,7 @@ class McpRegistryWorkflowTests(unittest.TestCase):
         self.assertIn("@WORKFLOW_LIBRARY_SHA", publish["uses"])
         self.assertNotIn("auth-method", publish["with"])
         self.assertEqual(publish["with"]["manifest-path"], "server.json")
+
+
+if __name__ == "__main__":
+    unittest.main()

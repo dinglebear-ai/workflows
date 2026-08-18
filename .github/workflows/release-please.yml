@@ -32,7 +32,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: ci-pool-ops
+    runs-on: ubuntu-24.04
     timeout-minutes: ${{ inputs.timeout-minutes }}
     outputs:
       release-created: ${{ steps.release.outputs.release_created }}
