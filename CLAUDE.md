@@ -7,8 +7,10 @@ moving workflow tags.
 ## Invariants
 
 - Fast Linux validation: self-hosted with exactly one `ci-pool-*` label.
-- Heavy release work: release-only, GitHub-hosted, x86_64/amd64 only.
-- No ARM/AArch64/QEMU build, package, installer, or documentation contract.
+- Heavy release work: release-only and GitHub-hosted.
+- ARM64/AArch64 workflow and repository contracts require the reusable
+  workflows' explicit `allow-arm64` opt-in; callers remain x86_64/amd64-only
+  by default.
 - External actions use full 40-character SHAs.
 - Top-level least-privilege permissions, job timeouts, locked installs, and
   `persist-credentials: false` are mandatory.
@@ -27,4 +29,3 @@ actionlint -config-file .github/actionlint.yaml
 
 Use `apply_patch` for edits. Preserve unrelated dirt. Create/claim a bead before
 non-trivial implementation.
-
