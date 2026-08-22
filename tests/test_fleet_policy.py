@@ -57,7 +57,9 @@ def policy_script() -> str:
     return run.split("python - <<'PY'\n", 1)[1].rsplit("PY\n", 1)[0]
 
 
-def run_policy(workflows: dict[str, str]) -> subprocess.CompletedProcess[str]:
+def run_policy(
+    workflows: dict[str, str], *, allow_arm64: bool = False
+) -> subprocess.CompletedProcess[str]:
     with tempfile.TemporaryDirectory() as temp:
         root = pathlib.Path(temp)
         (root / ".github/workflows").mkdir(parents=True)
@@ -72,6 +74,7 @@ def run_policy(workflows: dict[str, str]) -> subprocess.CompletedProcess[str]:
                 "PATH": "/usr/local/bin:/usr/bin:/bin",
                 "RELEASE_FILE_REGEX": r"(^|/)(release|publish|deploy)[^/]*\.ya?ml$",
                 "ALLOW_HOSTED_FAST": "false",
+                "ALLOW_ARM64": str(allow_arm64).lower(),
             },
             capture_output=True,
             text=True,
@@ -80,6 +83,15 @@ def run_policy(workflows: dict[str, str]) -> subprocess.CompletedProcess[str]:
 
 
 class GateWiringPolicyTests(unittest.TestCase):
+    def test_arm64_requires_explicit_opt_in(self) -> None:
+        arm = CLEAN_WORKFLOW.replace("echo building", "echo linux/arm64")
+        blocked = run_policy({"ci.yml": arm})
+        allowed = run_policy({"ci.yml": arm}, allow_arm64=True)
+
+        self.assertEqual(blocked.returncode, 1, blocked.stdout)
+        self.assertIn("ARM/QEMU contract is forbidden", blocked.stdout)
+        self.assertEqual(allowed.returncode, 0, allowed.stdout + allowed.stderr)
+
     def test_correctly_wired_gates_pass(self) -> None:
         result = run_policy({"ci.yml": CLEAN_WORKFLOW})
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

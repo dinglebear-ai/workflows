@@ -71,7 +71,7 @@ def validate() -> list[str]:
         kind = entry["kind"]
         text = path.read_text()
 
-        if path.name != "fleet-policy.yml" and FORBIDDEN_ARCH.search(text):
+        if path.name not in {"fleet-policy.yml", "fleet-contract.yml"} and FORBIDDEN_ARCH.search(text):
             errors.append(f"{path.name}: forbidden ARM/QEMU contract")
 
         if "permissions" not in data:

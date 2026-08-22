@@ -11,6 +11,10 @@ on:
         description: Exact workflows repository commit containing the contract implementation.
         type: string
         required: true
+      allow-arm64:
+        description: Allow an explicit ARM64/AArch64 installer and package contract.
+        type: boolean
+        default: false
       timeout-minutes:
         type: number
         default: 5
@@ -38,7 +42,13 @@ jobs:
       - name: Validate repository contract
         env:
           PROFILE: ${{ inputs.profile }}
-        run: >-
-          python3 workflow-library/scripts/fleet_contract.py check
-          --repo target
-          --profile "$PROFILE"
+          ALLOW_ARM64: ${{ inputs.allow-arm64 }}
+        run: |
+          args=()
+          if [[ "$ALLOW_ARM64" == "true" ]]; then
+            args+=(--allow-arm64)
+          fi
+          python3 workflow-library/scripts/fleet_contract.py check \
+            --repo target \
+            --profile "$PROFILE" \
+            "${args[@]}"

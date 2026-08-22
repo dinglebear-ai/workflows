@@ -142,6 +142,29 @@ class FleetContractTests(unittest.TestCase):
             with self.subTest(check=check):
                 self.assertIn(check, result.stdout)
 
+    def test_arm64_contract_can_be_explicitly_enabled(self) -> None:
+        repo = self.make_rust_repo()
+        (repo / "install.sh").write_text("#!/bin/sh\necho aarch64\n")
+        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+
+        result = subprocess.run(
+            [
+                "python3",
+                str(CHECKER),
+                "check",
+                "--repo",
+                str(repo),
+                "--profile",
+                "rust",
+                "--allow-arm64",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_docs_frontmatter_checks_tracked_markdown_only(self) -> None:
         repo = self.make_rust_repo()
         (repo / "docs/guide.md").write_text("# Missing metadata\n")

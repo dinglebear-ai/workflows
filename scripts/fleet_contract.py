@@ -335,7 +335,9 @@ def check_symlinks(repo: pathlib.Path) -> list[Finding]:
     return findings
 
 
-def check_scoped_text(repo: pathlib.Path) -> list[Finding]:
+def check_scoped_text(
+    repo: pathlib.Path, *, allow_arm64: bool = False
+) -> list[Finding]:
     findings: list[Finding] = []
     for path in tracked_files(repo):
         rel = relative(repo, path)
@@ -369,7 +371,7 @@ def check_scoped_text(repo: pathlib.Path) -> list[Finding]:
                 )
             )
 
-        if arm_scope and ARM_CONTRACT.search(text):
+        if not allow_arm64 and arm_scope and ARM_CONTRACT.search(text):
             findings.append(
                 Finding(
                     "no-arm-contract",
@@ -591,7 +593,9 @@ def check_docs(repo: pathlib.Path) -> list[Finding]:
     return findings
 
 
-def check(repo: pathlib.Path, profile: str) -> list[Finding]:
+def check(
+    repo: pathlib.Path, profile: str, *, allow_arm64: bool = False
+) -> list[Finding]:
     findings: list[Finding] = []
     if profile == "rust":
         findings.extend(check_toolchain(repo))
@@ -600,7 +604,7 @@ def check(repo: pathlib.Path, profile: str) -> list[Finding]:
         findings.extend(check_exact_dependencies(repo))
         findings.extend(check_descriptions(repo))
     findings.extend(check_symlinks(repo))
-    findings.extend(check_scoped_text(repo))
+    findings.extend(check_scoped_text(repo, allow_arm64=allow_arm64))
     findings.extend(check_tracked_paths(repo))
     findings.extend(check_env_schema(repo))
     findings.extend(check_docs(repo))
@@ -617,13 +621,14 @@ def parse_args() -> argparse.Namespace:
         choices=("rust", "python", "node", "go", "ops"),
         required=True,
     )
+    check_parser.add_argument("--allow-arm64", action="store_true")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     repo = args.repo.resolve()
-    findings = check(repo, args.profile)
+    findings = check(repo, args.profile, allow_arm64=args.allow_arm64)
     if findings:
         for finding in findings:
             print(finding.render())

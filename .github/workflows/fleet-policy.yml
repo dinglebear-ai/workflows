@@ -9,6 +9,10 @@ on:
       allow-hosted-fast:
         type: boolean
         default: false
+      allow-arm64:
+        description: Allow an explicit ARM64/AArch64 workflow contract.
+        type: boolean
+        default: false
       timeout-minutes:
         type: number
         default: 10
@@ -32,6 +36,7 @@ jobs:
         env:
           RELEASE_FILE_REGEX: ${{ inputs.release-file-regex }}
           ALLOW_HOSTED_FAST: ${{ inputs.allow-hosted-fast }}
+          ALLOW_ARM64: ${{ inputs.allow-arm64 }}
         run: |
           python - <<'PY'
           import os, pathlib, re, sys, yaml
@@ -41,6 +46,7 @@ jobs:
           needs_result = re.compile(r"needs\.([A-Za-z0-9_-]+)\.result")
           release_re = re.compile(os.environ["RELEASE_FILE_REGEX"])
           allow_hosted_fast = os.environ["ALLOW_HOSTED_FAST"].lower() == "true"
+          allow_arm64 = os.environ.get("ALLOW_ARM64", "false").lower() == "true"
           sha = re.compile(r"^[0-9a-f]{40}$")
           errors = []
 
@@ -53,7 +59,7 @@ jobs:
 
               if "permissions" not in data:
                   errors.append(f"{path}: missing top-level permissions")
-              if re.search(r"(?i)\b(arm64|aarch64|linux/arm64|setup-qemu)\b", text):
+              if not allow_arm64 and re.search(r"(?i)\b(arm64|aarch64|linux/arm64|setup-qemu)\b", text):
                   errors.append(f"{path}: ARM/QEMU contract is forbidden")
 
               for match in re.finditer(r"(?m)^\s*uses:\s*([^#\s]+)", text):
