@@ -120,6 +120,7 @@
     {"file": "release-please.yml", "kind": "fast", "category": "release", "summary": "Serialize Release Please and emit immutable release identity."},
     {"file": "repository-labeler.yml", "kind": "fast", "category": "automation", "summary": "Apply pull-request labels from repository-owned path rules."},
     {"file": "repository-policy.yml", "kind": "fast", "category": "policy", "summary": "Enforce required files, agent-memory symlinks, and tracked file size."},
+    {"file": "runner-farm-acceptance.yml", "kind": "internal", "category": "operations", "summary": "Temporarily prove one selected distributed runner-farm node executes a real GitHub Actions job."},
     {"file": "rust-docs.yml", "kind": "fast", "category": "rust", "summary": "Build workspace Rust documentation with warnings denied."},
     {"file": "rust-msrv.yml", "kind": "fast", "category": "rust", "summary": "Enforce an explicitly declared Rust minimum toolchain."},
     {"file": "rust-security.yml", "kind": "fast", "category": "rust", "summary": "Run pinned cargo-deny policy."},
