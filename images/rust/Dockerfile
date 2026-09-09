@@ -4,7 +4,7 @@ FROM rust:1.97.1-bookworm@sha256:389c1ae98c20fbcadca68a685482749267cec3c90893ae4
 ARG CARGO_AUDIT_VERSION=0.22.2
 ARG CARGO_DENY_VERSION=0.20.2
 ARG CARGO_NEXTEST_VERSION=0.9.140
-ARG KACHE_VERSION=0.12.0
+ARG KACHE_VERSION=0.15.1
 
 LABEL org.opencontainers.image.source="https://github.com/dinglebear-ai/workflows" \
       org.opencontainers.image.description="Pinned linux/amd64 Rust CI toolchain for dinglebear-ai" \

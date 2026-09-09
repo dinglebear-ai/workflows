@@ -69,7 +69,7 @@ jobs:
       - uses: kunobi-ninja/kache-action@a257c055543c2840700a9bbca8f9c3094a421b1b
         if: inputs.enable-kache
         with:
-          version: "0.13.0"
+          version: "0.15.1"
           s3-bucket: kache
           s3-region: us-east-1
           s3-prefix: rust
