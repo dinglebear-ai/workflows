@@ -1,0 +1,28 @@
+Workspace cleanup archive for dinglebear-ai/workflows
+Date: 2026-09-25
+Default: main
+
+STALE_BRANCHES 8
+STALE	agent/complete-bootstrap-kit	e06feb31465524de694ddae879db64aef6898875
+STALE	chore/kache-0.15.1	179ab9d6e58a6b541287a1004304b545bbe5e60f
+STALE	ci/scrub-endpoint-and-kache-013	769ec48a20a04feeaf3c61514105f7a6c033a432
+STALE	codex/arm64-policy	fd9842d08978405e3803d588261f7e9a35ab271e
+STALE	codex/fix-python-wheel-arch	349694537f13570a7c2926ac9e1572fdb3254bae
+STALE	codex/marketplace-optional-cache	95cc4a1e9eb2187eec7b05f72c14f51db1aaba04
+STALE	ops/runner-farm-acceptance	78d30bcbeb7c817779162c7c7404f85708d5a2f3
+STALE	ops/runner-farm-acceptance-matrix	7f9c2ac54849c9cf520f37b27260317def3ba9bf
+
+LOCAL_ONLY_BRANCHES 6
+LOCAL_ONLY	agent/complete-bootstrap-kit	e06feb31465524de694ddae879db64aef6898875
+LOCAL_ONLY	chore/kache-0.15.1	179ab9d6e58a6b541287a1004304b545bbe5e60f
+LOCAL_ONLY	codex/fix-python-wheel-arch	349694537f13570a7c2926ac9e1572fdb3254bae
+LOCAL_ONLY	codex/marketplace-optional-cache	95cc4a1e9eb2187eec7b05f72c14f51db1aaba04
+LOCAL_ONLY	ops/runner-farm-acceptance	78d30bcbeb7c817779162c7c7404f85708d5a2f3
+LOCAL_ONLY	ops/runner-farm-acceptance-matrix	7f9c2ac54849c9cf520f37b27260317def3ba9bf
+
+STALE_WORKTREES 3
+WORKTREE	/Users/jmagar/workspace/workflows	branch=ci/scrub-endpoint-and-kache-013	head=769ec48a20a04feeaf3c61514105f7a6c033a432
+WORKTREE	/private/tmp/runner-farm-acceptance-workflows	branch=ops/runner-farm-acceptance-matrix	head=7f9c2ac54849c9cf520f37b27260317def3ba9bf
+WORKTREE	/private/tmp/workflows-contract-b2813662	branch=DETACHED	head=b2813662ca27ca8868752fb353d9dd568f2f97f9
+
+WIP_SNAPSHOTS 0
