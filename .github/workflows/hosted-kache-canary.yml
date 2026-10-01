@@ -75,9 +75,15 @@ jobs:
           pr-comment: "false"
       - name: Seed identical release build
         run: cargo build --release --locked --manifest-path "$CANARY_MANIFEST"
+      - name: Drain seed transfers and upload the canary workspace
+        run: |
+          kache daemon stop
+          kache sync --push --manifest-path "$CANARY_MANIFEST" 2>&1 \
+            | tee "$RUNNER_TEMP/kache-seed-sync.log"
+          grep -Eq 'Uploaded:[[:space:]]+1/1' "$RUNNER_TEMP/kache-seed-sync.log"
       - name: Record seed evidence
         run: |
-          kache report --format json --root "$GITHUB_WORKSPACE/$CANARY_ROOT" \
+          kache report --format json \
             | jq '.summary | {local_hits, prefetch_hits, remote_hits, misses, errors, fallbacks, store_failures}' \
             >> "$GITHUB_STEP_SUMMARY"
 
