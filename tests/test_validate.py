@@ -187,6 +187,17 @@ class WorkflowLibraryTests(unittest.TestCase):
         self.assertIn("kache-0.28.1", workflow["env"]["CANARY_CACHE_PREFIX"])
         self.assertNotIn("secrets.", str(workflow["jobs"]["pr-build"]))
 
+    def test_canary_upload_is_scoped_to_its_build_root(self) -> None:
+        workflow = yaml.load(
+            (ROOT / ".github/workflows/hosted-kache-canary.yml").read_text(),
+            Loader=yaml.BaseLoader,
+        )
+        steps = workflow["jobs"]["seed"]["steps"]
+        upload = next(step for step in steps if step.get("name") == "Drain seed transfers and upload the canary workspace")
+        self.assertIn('kache sync --push --manifest-path "$CANARY_MANIFEST"', upload["run"])
+        self.assertLess(upload["run"].index("kache daemon stop"), upload["run"].index("kache sync"))
+        self.assertIn("Uploaded:", upload["run"])
+
     def test_platform_release_cache_stays_credentialless(self) -> None:
         workflow = yaml.load(
             (ROOT / ".github/workflows/hosted-rust-platform-release.yml").read_text(),
