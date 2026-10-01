@@ -160,7 +160,7 @@ class WorkflowLibraryTests(unittest.TestCase):
     def test_kache_action_uses_shard_capable_pin(self) -> None:
         pinned = (
             "kunobi-ninja/kache-action"
-            "@a257c055543c2840700a9bbca8f9c3094a421b1b"
+            "@ad7317540dcdd71c904f7a60a87b620a0c0e67ed"
         )
         for workflow_name in (
             "hosted-incus-image.yml",
@@ -171,6 +171,21 @@ class WorkflowLibraryTests(unittest.TestCase):
                 self.assertIn(pinned, text)
                 self.assertIn("\n          namespace:", text)
                 self.assertIn('\n          pr-comment: "false"', text)
+
+    def test_canary_keeps_shared_credentials_off_pull_requests(self) -> None:
+        workflow = yaml.load(
+            (ROOT / ".github/workflows/hosted-kache-canary.yml").read_text(),
+            Loader=yaml.BaseLoader,
+        )
+        for job_name in ("seed", "verify"):
+            job = workflow["jobs"][job_name]
+            self.assertIn("github.event_name != 'pull_request'", job["if"])
+            self.assertIn("github.ref == 'refs/heads/main'", job["if"])
+            cache = next(step for step in job["steps"] if "kache-action@" in step.get("uses", ""))
+            self.assertEqual(cache["with"]["s3-prefix"], "${{ env.CANARY_CACHE_PREFIX }}")
+        self.assertIn("github.run_id", workflow["env"]["CANARY_CACHE_PREFIX"])
+        self.assertIn("kache-0.28.1", workflow["env"]["CANARY_CACHE_PREFIX"])
+        self.assertNotIn("secrets.", str(workflow["jobs"]["pr-build"]))
 
     def test_platform_release_cache_stays_credentialless(self) -> None:
         workflow = yaml.load(

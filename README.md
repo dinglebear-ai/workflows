@@ -254,3 +254,7 @@ or self-hosted release jobs.
 ## License
 
 Original Dinglebear-authored portions of this project are licensed under [AGPL-3.0-only](LICENSE). Separate commercial licensing is available for organizations that need terms outside the AGPL. Third-party material remains under its original license. See [LICENSING.md](LICENSING.md).
+
+The hosted kache canary builds pull requests without shared cache credentials.
+Trusted main runs seed and verify remote reuse in a version-and-run-specific
+prefix, so prior key schemas cannot contaminate the probe.
