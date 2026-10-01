@@ -88,7 +88,9 @@ control-plane workflows.
 
 ### Hosted release and deployment
 
-- Rust Linux and native Linux/macOS/Windows x86_64 artifacts.
+- Rust Linux and native Linux/macOS/Windows x86_64 artifacts. The native platform
+  release workflow uses pinned kache 0.28.1 with credentialless GitHub caching
+  and a 10 GB local store budget.
 - Go x86_64 archives.
 - Python wheels/sdists and trusted PyPI publishing.
 - npm trusted publishing.
