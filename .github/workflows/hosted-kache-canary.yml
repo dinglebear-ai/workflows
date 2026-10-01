@@ -1,14 +1,18 @@
 name: Hosted Kache canary
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/hosted-kache-canary.yml"
+      - "ci/kache-hosted-canary/**"
+      - "docs/workflow-catalog.md"
   pull_request:
     paths:
       - ".github/workflows/hosted-kache-canary.yml"
       - "ci/kache-hosted-canary/**"
       - "docs/workflow-catalog.md"
   workflow_dispatch:
-  schedule:
-    - cron: "17 9 * * 0"
 
 concurrency:
   group: hosted-kache-canary-${{ github.ref }}
@@ -26,7 +30,7 @@ env:
 jobs:
   pr-build:
     name: Build canary without shared credentials
-    if: github.event_name == 'pull_request'
+    if: github.event_name != 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -45,7 +49,8 @@ jobs:
       - name: Compile the canary
         run: cargo build --release --locked --manifest-path "$CANARY_MANIFEST"
   seed:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    # Kache 0.28.1 permits writers only on protected branch push events.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.ref_protected
     name: Seed hosted remote
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -88,7 +93,8 @@ jobs:
             >> "$GITHUB_STEP_SUMMARY"
 
   verify:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    # Kache 0.28.1 permits writers only on protected branch push events.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.ref_protected
     name: Verify fresh hosted remote reuse
     needs: [seed]
     runs-on: ubuntu-24.04

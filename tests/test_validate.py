@@ -179,10 +179,13 @@ class WorkflowLibraryTests(unittest.TestCase):
         )
         for job_name in ("seed", "verify"):
             job = workflow["jobs"][job_name]
-            self.assertIn("github.event_name != 'pull_request'", job["if"])
+            self.assertIn("github.event_name == 'push'", job["if"])
+            self.assertIn("github.ref_protected", job["if"])
             self.assertIn("github.ref == 'refs/heads/main'", job["if"])
             cache = next(step for step in job["steps"] if "kache-action@" in step.get("uses", ""))
             self.assertEqual(cache["with"]["s3-prefix"], "${{ env.CANARY_CACHE_PREFIX }}")
+        self.assertEqual(workflow["on"]["push"]["branches"], ["main"])
+        self.assertNotIn("schedule", workflow["on"])
         self.assertIn("github.run_id", workflow["env"]["CANARY_CACHE_PREFIX"])
         self.assertIn("kache-0.28.1", workflow["env"]["CANARY_CACHE_PREFIX"])
         self.assertNotIn("secrets.", str(workflow["jobs"]["pr-build"]))
