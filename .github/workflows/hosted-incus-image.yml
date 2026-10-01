@@ -66,7 +66,7 @@ jobs:
           set -euo pipefail
           test -n "$KACHE_ACCESS_KEY"
           test -n "$KACHE_SECRET_KEY"
-      - uses: kunobi-ninja/kache-action@a257c055543c2840700a9bbca8f9c3094a421b1b
+      - uses: kunobi-ninja/kache-action@ad7317540dcdd71c904f7a60a87b620a0c0e67ed
         if: inputs.enable-kache
         with:
           version: '0.28.1'

@@ -55,7 +55,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
         with:
           toolchain: ${{ inputs.toolchain }}
-      - uses: kunobi-ninja/kache-action@a257c055543c2840700a9bbca8f9c3094a421b1b
+      - uses: kunobi-ninja/kache-action@ad7317540dcdd71c904f7a60a87b620a0c0e67ed
         with:
           version: '0.28.1'
           s3-bucket: kache
