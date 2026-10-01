@@ -63,6 +63,13 @@ jobs:
         with:
           toolchain: ${{ inputs.toolchain }}
           targets: ${{ matrix.target }}
+      - name: Set up pinned credentialless Rust cache
+        uses: kunobi-ninja/kache-action@ad7317540dcdd71c904f7a60a87b620a0c0e67ed
+        with:
+          version: '0.28.1'
+          github-cache: 'true'
+          max-size: '10GB'
+          pr-comment: 'false'
       - name: Build release
         env:
           COMMAND: ${{ inputs.build-command }}

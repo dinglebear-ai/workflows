@@ -172,6 +172,21 @@ class WorkflowLibraryTests(unittest.TestCase):
                 self.assertIn("\n          namespace:", text)
                 self.assertIn('\n          pr-comment: "false"', text)
 
+    def test_platform_release_cache_stays_credentialless(self) -> None:
+        workflow = yaml.load(
+            (ROOT / ".github/workflows/hosted-rust-platform-release.yml").read_text(),
+            Loader=yaml.BaseLoader,
+        )
+        steps = workflow["jobs"]["build"]["steps"]
+        cache = next(step for step in steps if "kache-action@" in step.get("uses", ""))
+        self.assertEqual(cache["with"]["github-cache"], "true")
+        self.assertEqual(cache["with"]["pr-comment"], "false")
+        self.assertFalse(any(key.startswith("s3-") for key in cache["with"]))
+        self.assertFalse(workflow["on"]["workflow_call"].get("secrets"))
+        self.assertLess(steps.index(cache), next(
+            index for index, step in enumerate(steps) if step.get("name") == "Build release"
+        ))
+
     def test_fast_rust_uses_private_fleet_kache_contract(self) -> None:
         path = ROOT / ".github/workflows/fast-rust.yml"
         workflow = yaml.load(path.read_text(), Loader=yaml.BaseLoader)
