@@ -200,6 +200,10 @@ class WorkflowLibraryTests(unittest.TestCase):
         self.assertIn('kache sync --push --manifest-path "$CANARY_MANIFEST"', upload["run"])
         self.assertLess(upload["run"].index("kache daemon stop"), upload["run"].index("kache sync"))
         self.assertIn("Uploaded:", upload["run"])
+        self.assertIn("Listing remote keys", upload["run"])
+        verify = workflow["jobs"]["verify"]["steps"]
+        self.assertTrue(any("Downloaded:" in step.get("run", "") for step in verify))
+        self.assertTrue(any(".misses == 0" in step.get("run", "") for step in verify))
 
     def test_platform_release_cache_stays_credentialless(self) -> None:
         workflow = yaml.load(

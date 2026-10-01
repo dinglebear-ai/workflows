@@ -85,7 +85,10 @@ jobs:
           kache daemon stop
           kache sync --push --manifest-path "$CANARY_MANIFEST" 2>&1 \
             | tee "$RUNNER_TEMP/kache-seed-sync.log"
-          grep -Eq 'Uploaded:[[:space:]]+1/1' "$RUNNER_TEMP/kache-seed-sync.log"
+          # The daemon may already have uploaded the entry while compiling.
+          # The fresh verify runner must still download it and record a cache hit.
+          grep -Eq 'Uploaded:[[:space:]]+1/1|Listing remote keys\.\.\.[[:space:]]+1 keys' \
+            "$RUNNER_TEMP/kache-seed-sync.log"
       - name: Record seed evidence
         run: |
           kache report --format json \
