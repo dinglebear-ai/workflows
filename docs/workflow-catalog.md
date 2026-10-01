@@ -102,7 +102,9 @@ Internal workflows:
 - `manage-release.yml` owns this repository's Release Please event;
 - `publish-ci-images.yml` publishes images only from a GitHub release;
 - `hosted-kache-canary.yml` seeds MinIO on one hosted runner and requires
-  remote cache reuse on a second fresh runner.
+  remote cache reuse on a second fresh runner after a protected main push.
+  Kache 0.28.1 treats manual and scheduled GitHub runs as read-only; manual
+  dispatch therefore checks compilation without shared credentials.
 
 ## Profiles
 
